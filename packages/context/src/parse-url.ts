@@ -32,3 +32,20 @@ export function parsePrUrl(url: string): ParsedPrUrl | null {
     number: Number(match[3]!),
   };
 }
+
+/**
+ * Whether a URL is the diff tab of a pull request.
+ *
+ * GitHub serves this as both `/files` (classic) and `/changes` (the newer
+ * view), and rolls the rename out gradually — both are live, so both count.
+ */
+export function isPrDiffUrl(url: string): boolean {
+  if (!parsePrUrl(url)) return false;
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return false;
+  }
+  return /\/pull\/\d+\/(files|changes)(\/|$)/.test(path);
+}

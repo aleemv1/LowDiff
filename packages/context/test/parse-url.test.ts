@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrUrl } from '../src/parse-url.js';
+import { isPrDiffUrl, parsePrUrl } from '../src/parse-url.js';
 
 describe('parsePrUrl', () => {
   it('parses the files-changed tab', () => {
@@ -40,5 +40,35 @@ describe('parsePrUrl', () => {
 
   it('returns null for garbage', () => {
     expect(parsePrUrl('not a url')).toBeNull();
+  });
+});
+
+describe('isPrDiffUrl', () => {
+  it('accepts the classic /files tab', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412/files')).toBe(true);
+  });
+
+  it('accepts the newer /changes tab', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412/changes')).toBe(true);
+  });
+
+  it('accepts a query string on either', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412/changes?w=1')).toBe(true);
+  });
+
+  it('rejects the conversation tab', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412')).toBe(false);
+  });
+
+  it('rejects the commits tab', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412/commits')).toBe(false);
+  });
+
+  it('rejects a path that merely contains the word files', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/pull/412/commits/files-x')).toBe(false);
+  });
+
+  it('rejects non-PR pages', () => {
+    expect(isPrDiffUrl('https://github.com/a/b/issues/412')).toBe(false);
   });
 });

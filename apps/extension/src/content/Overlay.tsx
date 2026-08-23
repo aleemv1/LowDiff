@@ -1,30 +1,83 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
-import type { FileDiff, Mode, Note } from '@lowdiff/core';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import type { Mode, Note } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
-import { DiffFileView } from './components/DiffFile.js';
+import { NotePopover } from './components/NotePopover.js';
 import { ChatPanel } from './components/ChatPanel.js';
+import { clearBadges, setActiveBadge, syncBadges } from './annotate.js';
+import { detectDiffDom } from './dom/index.js';
 
 interface Props {
   pr: PrLocation;
-  files: FileDiff[];
 }
 
-export function App({ pr, files }: Props) {
+interface Open {
+  note: Note;
+  top: number;
+  left: number;
+}
+
+/**
+ * Owns the summary card, the note popover, and the chat panel.
+ *
+ * The per-line badges are not rendered here — they are injected into GitHub's
+ * own diff rows by `syncBadges`, so the annotations sit on the real diff the
+ * reviewer is already reading rather than on a copy of it.
+ */
+export function Overlay({ pr }: Props) {
   const [mode, setMode] = useState<Mode>('review');
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
   const [cached, setCached] = useState(false);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [needsSetup, setNeedsSetup] = useState(false);
+  const [placed, setPlaced] = useState(0);
 
-  const [openNote, setOpenNote] = useState<string | null>(null);
+  const [open, setOpen] = useState<Open | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [typing, setTyping] = useState(false);
   const [input, setInput] = useState('');
+
+  const notesRef = useRef<Note[]>([]);
+  notesRef.current = notes;
+
+  const select = useCallback((note: Note, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setActiveBadge(element);
+    setOpen({
+      note,
+      top: rect.bottom + window.scrollY + 8,
+      // Right-align the 440px popover to the badge, clamped to the viewport.
+      left: Math.max(12, Math.min(rect.right + window.scrollX - 440, window.innerWidth - 452)),
+    });
+  }, []);
+
+  const closePopover = useCallback(() => {
+    setActiveBadge(null);
+    setOpen(null);
+  }, []);
+
+  /** Re-place badges whenever the notes change or GitHub re-renders rows. */
+  useEffect(() => {
+    if (notes.length === 0) {
+      clearBadges();
+      setPlaced(0);
+      return;
+    }
+    const place = () => {
+      const dom = detectDiffDom();
+      if (!dom) return;
+      setPlaced(syncBadges(notes, dom, ({ note, element }) => select(note, element)));
+    };
+    place();
+
+    // GitHub loads large diffs progressively, so rows appear after we first run.
+    const observer = new MutationObserver(() => place());
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [notes, select]);
 
   const run = useCallback(
     async (nextMode: Mode, refresh: boolean) => {
@@ -40,7 +93,7 @@ export function App({ pr, files }: Props) {
       setBusy(false);
       if (!reply.ok) {
         setError(reply.error);
-        setNeedsSetup(reply.error.includes('No API key'));
+        setNotes([]);
         return;
       }
       setSummary(reply.summary);
@@ -61,20 +114,12 @@ export function App({ pr, files }: Props) {
 
       if (reply.ok && !reply.settings.configured) {
         setBusy(false);
-        setNeedsSetup(true);
         setError('LowDiff needs an API key before it can review this pull request.');
         return;
       }
       await run(startMode, false);
     })();
   }, [run]);
-
-  const onMode = (next: Mode) => {
-    if (next === mode) return;
-    setMode(next);
-    setOpenNote(null);
-    void run(next, false);
-  };
 
   const send = (question: string) => {
     if (!question.trim()) return;
@@ -117,11 +162,7 @@ export function App({ pr, files }: Props) {
     });
   };
 
-  const askAbout = (note: Note) => {
-    setOpenNote(null);
-    setChatOpen(true);
-    send(`About "${note.title}" at ${note.anchor.path}:${note.anchor.line} — tell me more.`);
-  };
+  const notesLost = notes.length - placed;
 
   return (
     <div class="root">
@@ -131,49 +172,54 @@ export function App({ pr, files }: Props) {
         mode={mode}
         cached={cached}
         busy={busy}
-        onMode={onMode}
+        onMode={(next) => {
+          if (next === mode) return;
+          setMode(next);
+          closePopover();
+          void run(next, false);
+        }}
         onRefresh={() => void run(mode, true)}
       />
 
-      {needsSetup && (
+      {notesLost > 0 && !busy && (
         <div
           style={{
-            border: `1px solid ${C.accentBorder}`, borderRadius: '10px', padding: '14px 16px',
-            marginBottom: '18px', background: C.accentTint,
-            font: `12.5px/1.6 'DM Sans',sans-serif`, color: C.body,
+            border: `1px solid ${C.accentBorder}`, borderRadius: '10px', padding: '10px 14px',
+            marginBottom: '16px', background: C.accentTint,
+            font: `12px/1.55 'DM Sans',sans-serif`, color: C.body,
           }}
         >
-          Add an API key in LowDiff's options to start reviewing.{' '}
-          <button
-            class="btn btn-primary"
-            style={{ marginLeft: '6px' }}
-            onClick={() => void chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' })}
-          >
-            Open options
-          </button>
+          {notesLost} note{notesLost === 1 ? '' : 's'} couldn't be placed — those lines
+          aren't rendered on this page yet. Expand the collapsed files and they'll appear.
         </div>
       )}
 
-      {!needsSetup &&
-        files
-          .filter((f) => f.hunks.length > 0)
-          .map((file) => (
-            <DiffFileView
-              key={file.path}
-              file={file}
-              notes={notes}
-              openNote={openNote}
-              onToggle={(id) => setOpenNote((cur) => (cur === id ? null : id))}
-              onAsk={askAbout}
-            />
-          ))}
+      {open && (
+        <div
+          style={{
+            position: 'absolute', top: `${open.top}px`, left: `${open.left}px`,
+            width: '440px', zIndex: 2147483000,
+          }}
+        >
+          <NotePopover
+            note={open.note}
+            floating
+            onClose={closePopover}
+            onAsk={(note) => {
+              closePopover();
+              setChatOpen(true);
+              send(`About "${note.title}" at ${note.anchor.path}:${note.anchor.line} — tell me more.`);
+            }}
+          />
+        </div>
+      )}
 
       {chatOpen ? (
         <ChatPanel
           messages={messages}
           typing={typing}
           input={input}
-          contextChips={[`PR #${pr.number}`, `${files.length} files changed`]}
+          contextChips={[`PR #${pr.number}`, `${notes.length} notes`]}
           onInput={setInput}
           onSend={() => send(input)}
           onClose={() => setChatOpen(false)}

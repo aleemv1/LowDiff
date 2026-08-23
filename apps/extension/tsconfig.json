@@ -3,16 +3,32 @@
   "compilerOptions": {
     "outDir": "dist-types",
     "rootDir": ".",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "types": ["chrome"],
+    "types": [
+      "chrome"
+    ],
     "noEmit": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite*.ts"
+  ],
   "references": [
-    { "path": "../../packages/core" },
-    { "path": "../../packages/providers" },
-    { "path": "../../packages/context" }
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/providers"
+    },
+    {
+      "path": "../../packages/context"
+    }
   ]
 }

@@ -44,7 +44,10 @@ export class GitHubContextProvider implements ContextProvider {
 
   constructor(options: GitHubOptions = {}) {
     this.token = options.token;
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    // Bound to the global scope: stored as a plain instance property and
+    // called as `this.fetchImpl(...)`, the real fetch receives the provider
+    // as its `this` and throws "Illegal invocation".
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   }
 
   private async request<T>(path: string): Promise<T> {

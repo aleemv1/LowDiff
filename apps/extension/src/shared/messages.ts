@@ -1,4 +1,4 @@
-import type { Mode, Note } from '@lowdiff/core';
+import type { FileDiff, Mode, Note } from '@lowdiff/core';
 import type { ProviderId } from '@lowdiff/providers/types';
 
 export interface Settings {
@@ -34,6 +34,7 @@ export type Request =
   | { type: 'GET_PUBLIC_SETTINGS' }
   | { type: 'ANNOTATE'; pr: PrLocation; mode: Mode; refresh?: boolean }
   | { type: 'CHAT'; pr: PrLocation; question: string; history: ChatTurn[]; port: string }
+  | { type: 'GET_DIFF'; pr: PrLocation }
   | { type: 'OPEN_OPTIONS' };
 
 export interface ChatTurn {
@@ -54,6 +55,8 @@ export interface Failure {
   ok: false;
   error: string;
 }
+
+export type DiffReply = { ok: true; files: FileDiff[] } | Failure;
 
 export type AnnotateReply = AnnotateOk | Failure;
 export type PublicSettingsReply = { ok: true; settings: PublicSettings } | Failure;

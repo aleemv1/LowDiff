@@ -4,6 +4,7 @@ import { createLlmClient } from '@lowdiff/providers';
 import type {
   AnnotateReply,
   ChatTurn,
+  DiffReply,
   PrLocation,
   PublicSettingsReply,
   Request,
@@ -39,12 +40,16 @@ chrome.runtime.onMessage.addListener((message: Request, _sender, sendResponse) =
   return true; // keep the channel open for the async reply
 });
 
-async function handle(message: Request): Promise<AnnotateReply | PublicSettingsReply | { ok: true }> {
+async function handle(
+  message: Request,
+): Promise<AnnotateReply | PublicSettingsReply | DiffReply | { ok: true }> {
   switch (message.type) {
     case 'GET_PUBLIC_SETTINGS': {
       const settings = await loadSettings();
       return { ok: true, settings: toPublicSettings(settings) };
     }
+    case 'GET_DIFF':
+      return getDiff(message.pr);
     case 'ANNOTATE':
       return annotate(message.pr, message.mode, message.refresh ?? false);
     case 'CHAT':
@@ -54,6 +59,21 @@ async function handle(message: Request): Promise<AnnotateReply | PublicSettingsR
       await chrome.runtime.openOptionsPage();
       return { ok: true };
   }
+}
+
+/**
+ * The content script cannot fetch this itself: it runs in github.com's page
+ * context, so its requests are subject to that page's CSP and CORS. The
+ * worker has host permissions and the stored token.
+ */
+async function getDiff(pr: PrLocation): Promise<DiffReply> {
+  const settings = await loadSettings();
+  const github = new GitHubContextProvider(
+    settings.githubToken ? { token: settings.githubToken } : {},
+  );
+  const meta = await github.getPr(pr);
+  const files = await github.getDiff({ ...pr, headSha: meta.headSha });
+  return { ok: true, files };
 }
 
 async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<AnnotateReply> {
@@ -91,7 +111,7 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
     return { ok: false, error: 'This pull request has no textual diff to review.' };
   }
 
-  const llm = await createLlmClient({
+  const llm = createLlmClient({
     provider: settings.provider,
     auth: { kind: 'apiKey', key },
     ...(settings.model ? { model: settings.model } : {}),
@@ -141,7 +161,7 @@ async function chat(
   const meta = await github.getPr(pr);
   const files = await github.getDiff({ ...pr, headSha: meta.headSha });
 
-  const llm = await createLlmClient({
+  const llm = createLlmClient({
     provider: settings.provider,
     auth: { kind: 'apiKey', key },
     ...(settings.model ? { model: settings.model } : {}),

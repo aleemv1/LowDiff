@@ -1,0 +1,15 @@
+{
+  "name": "@lowdiff/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "bin": { "lowdiff": "./src/index.ts" },
+  "dependencies": {
+    "@lowdiff/context": "0.0.1",
+    "@lowdiff/core": "0.0.1",
+    "@lowdiff/providers": "0.0.1"
+  },
+  "devDependencies": { "@types/node": "^22.10.5", "tsx": "^4.19.2" },
+  "scripts": { "start": "tsx src/index.ts" }
+}

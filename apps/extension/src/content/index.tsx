@@ -1,34 +1,50 @@
 import { render } from 'preact';
-import { GitHubContextProvider, parsePrUrl } from '@lowdiff/context';
-import type { FileDiff } from '@lowdiff/core';
-import { App } from './App.js';
+import { isPrDiffUrl, parsePrUrl } from '@lowdiff/context';
+import { Overlay } from './Overlay.js';
+import { clearBadges } from './annotate.js';
 import { STYLES } from './theme.js';
 
 const HOST_ID = 'lowdiff-root';
+const TAG = '[LowDiff]';
+
+console.info(TAG, 'content script loaded', window.location.pathname);
 
 /**
- * Mount point: the Files-changed tab.
+ * Candidate mount points for the summary card, newest markup first.
  *
- * The overlay renders its own diff inside a Shadow DOM rather than injecting
- * badges into GitHub's markup. GitHub reships that markup regularly, and a
- * renderer coupled to it breaks on their schedule instead of ours. The shadow
- * boundary also stops GitHub's stylesheet reaching in.
+ * GitHub runs several generations of this page at once and rolls new ones out
+ * per account, so more than one of these is live at any time. `main` is the
+ * backstop that exists on every generation.
  */
-async function mount(): Promise<void> {
-  const location = parsePrUrl(window.location.href);
-  if (!location) return;
-  if (!window.location.pathname.includes('/files')) return;
-  if (document.getElementById(HOST_ID)) return;
+const ANCHORS = [
+  '[data-testid="diff-view"]',
+  '.js-diff-progressive-container',
+  '#files',
+  '.diff-view',
+  'main',
+];
 
-  const anchor =
-    document.querySelector('.js-diff-progressive-container') ??
-    document.querySelector('#files') ??
-    document.querySelector('main');
-  if (!anchor) return;
+function findAnchor(): Element | null {
+  for (const selector of ANCHORS) {
+    const found = document.querySelector(selector);
+    if (found) return found;
+  }
+  return null;
+}
+
+function mount(): boolean {
+  if (!isPrDiffUrl(window.location.href)) return false;
+  if (document.getElementById(HOST_ID)) return true;
+
+  const location = parsePrUrl(window.location.href);
+  if (!location) return false;
+
+  const anchor = findAnchor();
+  if (!anchor?.parentElement) return false;
 
   const host = document.createElement('div');
   host.id = HOST_ID;
-  anchor.parentElement?.insertBefore(host, anchor);
+  anchor.parentElement.insertBefore(host, anchor);
 
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
@@ -38,27 +54,34 @@ async function mount(): Promise<void> {
   const container = document.createElement('div');
   shadow.append(container);
 
-  let files: FileDiff[] = [];
-  try {
-    // Unauthenticated read is enough to render the diff; the worker holds the
-    // token for authenticated calls.
-    files = await new GitHubContextProvider().getDiff({ ...location, headSha: '' });
-  } catch {
-    files = [];
-  }
-
-  render(<App pr={location} files={files} />, container);
+  console.info(TAG, 'mounted before', anchor.tagName, anchor.className || '(no class)');
+  render(<Overlay pr={location} />, container);
+  return true;
 }
 
-void mount();
+function unmount(): void {
+  clearBadges();
+  document.getElementById(HOST_ID)?.remove();
+}
 
-// GitHub navigates client-side, so the content script only runs once per load.
+/**
+ * GitHub renders this view client-side and navigates without a page load, so a
+ * one-shot mount at document_idle usually runs before the diff exists.
+ */
+let lastUrl = window.location.href;
+
+new MutationObserver(() => {
+  if (window.location.href !== lastUrl) {
+    lastUrl = window.location.href;
+    unmount();
+  }
+  if (!isPrDiffUrl(window.location.href)) {
+    unmount();
+    return;
+  }
+  mount();
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+mount();
 document.addEventListener('turbo:load', () => void mount());
 document.addEventListener('pjax:end', () => void mount());
-
-let lastUrl = window.location.href;
-new MutationObserver(() => {
-  if (window.location.href === lastUrl) return;
-  lastUrl = window.location.href;
-  void mount();
-}).observe(document.body, { childList: true, subtree: true });

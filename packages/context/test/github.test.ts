@@ -117,3 +117,29 @@ describe('GitHubContextProvider.searchCode', () => {
     expect(called).toBe(false);
   });
 });
+
+describe('GitHubContextProvider default fetch', () => {
+  it('calls the global fetch with its own binding', async () => {
+    // A real `fetch` throws "Illegal invocation" when its `this` is anything
+    // other than the global scope, which is what happens if it is stored as an
+    // instance property and called as `this.fetchImpl(...)`.
+    const original = globalThis.fetch;
+    globalThis.fetch = function (this: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Failed to execute 'fetch': Illegal invocation");
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ title: 't', body: null, head: { sha: 'abc' } })),
+      );
+    } as typeof fetch;
+
+    try {
+      const provider = new GitHubContextProvider();
+      await expect(
+        provider.getPr({ owner: 'a', repo: 'b', number: 1 }),
+      ).resolves.toMatchObject({ headSha: 'abc' });
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

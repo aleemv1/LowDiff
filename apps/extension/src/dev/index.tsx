@@ -6,7 +6,7 @@
 import { render } from 'preact';
 import { parsePatch } from '@lowdiff/core';
 import type { FileDiff, Note } from '@lowdiff/core';
-import { App } from '../content/App.js';
+import { Overlay } from '../content/Overlay.js';
 import { STYLES } from '../content/theme.js';
 import { anchorNotes } from '@lowdiff/core';
 
@@ -136,6 +136,6 @@ style.textContent = STYLES.replace(':host', ':root');
 document.head.append(style);
 
 render(
-  <App pr={{ owner: 'acme', repo: 'search-api', number: 412 }} files={files} />,
+  <Overlay pr={{ owner: 'acme', repo: 'search-api', number: 412 }} />,
   document.getElementById('root')!,
 );

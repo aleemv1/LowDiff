@@ -1,28 +1,29 @@
 export * from './types.js';
 export * from './schema-dialects.js';
+export { AnthropicClient } from './anthropic.js';
+export { OpenAIClient } from './openai.js';
+export { GoogleClient } from './google.js';
 
+import { AnthropicClient } from './anthropic.js';
+import { GoogleClient } from './google.js';
+import { OpenAIClient } from './openai.js';
 import type { LlmClient, ProviderConfig } from './types.js';
 
 /**
  * Build a client for the configured provider.
  *
- * The adapters are dynamically imported so the service worker only pays for
- * the SDK the user actually selected — loading all three at startup would
- * triple the worker's cold start for no benefit.
+ * Statically imported on purpose. A dynamic import() makes the bundler emit a
+ * preload helper that touches document.head, which throws in a service worker
+ * — and since the worker ships as one inlined file anyway, deferring the SDKs
+ * would not have saved anything.
  */
-export async function createLlmClient(config: ProviderConfig): Promise<LlmClient> {
+export function createLlmClient(config: ProviderConfig): LlmClient {
   switch (config.provider) {
-    case 'anthropic': {
-      const { AnthropicClient } = await import('./anthropic.js');
+    case 'anthropic':
       return new AnthropicClient(config);
-    }
-    case 'openai': {
-      const { OpenAIClient } = await import('./openai.js');
+    case 'openai':
       return new OpenAIClient(config);
-    }
-    case 'google': {
-      const { GoogleClient } = await import('./google.js');
+    case 'google':
       return new GoogleClient(config);
-    }
   }
 }

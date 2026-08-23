@@ -3,18 +3,30 @@ import { C, KIND_STYLE } from '../theme.js';
 
 interface Props {
   note: Note;
+  /** Positioned by the caller rather than relative to a diff row. */
+  floating?: boolean;
   onClose: () => void;
   onAsk: (note: Note) => void;
 }
 
-export function NotePopover({ note, onClose, onAsk }: Props) {
+export function NotePopover({ note, floating, onClose, onAsk }: Props) {
   const style = KIND_STYLE[note.kind]!;
+  const placement = floating
+    ? { position: 'static' as const, width: '100%', maxWidth: 'none' }
+    : {
+        position: 'absolute' as const,
+        right: '42px',
+        top: '100%',
+        marginTop: '6px',
+        width: '440px',
+        maxWidth: 'calc(100% - 60px)',
+      };
 
   return (
     <div
       style={{
-        position: 'absolute', right: '42px', top: '100%', marginTop: '6px', zIndex: 40,
-        width: '440px', maxWidth: 'calc(100% - 60px)', background: C.surface,
+        ...placement,
+        zIndex: 40, background: C.surface,
         border: `1px solid ${C.line}`, borderRadius: '12px',
         boxShadow: '0 12px 32px rgba(20,30,60,.16)', animation: 'notePop .14s ease-out',
         whiteSpace: 'normal', overflow: 'hidden', textAlign: 'left',
