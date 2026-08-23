@@ -1,0 +1,119 @@
+import { describe, it, expect } from 'vitest';
+import { GitHubContextProvider } from '../src/github.js';
+
+function fakeFetch(
+  handler: (url: string) => { status?: number; body?: unknown; headers?: Record<string, string> },
+): typeof fetch {
+  return (async (input: RequestInfo | URL) => {
+    const { status = 200, body = {}, headers = {} } = handler(String(input));
+    return new Response(JSON.stringify(body), { status, headers });
+  }) as typeof fetch;
+}
+
+const PR = { owner: 'acme', repo: 'search-api', number: 412, headSha: 'abc123' };
+
+describe('GitHubContextProvider.getDiff', () => {
+  it('parses patches into hunks with line numbers', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({
+        body: [
+          {
+            filename: 'src/a.ts',
+            status: 'modified',
+            additions: 1,
+            deletions: 1,
+            patch: '@@ -1,2 +1,2 @@\n ctx\n-old\n+new',
+          },
+        ],
+      })),
+    });
+
+    const files = await provider.getDiff(PR);
+    expect(files).toHaveLength(1);
+    expect(files[0]!.hunks[0]!.lines.map((l) => l.text)).toEqual(['ctx', 'old', 'new']);
+  });
+
+  it('handles binary files that come back with no patch', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({
+        body: [{ filename: 'logo.png', status: 'added', additions: 0, deletions: 0 }],
+      })),
+    });
+    expect((await provider.getDiff(PR))[0]!.hunks).toEqual([]);
+  });
+
+  it('records the previous path for a rename', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({
+        body: [
+          {
+            filename: 'b.ts',
+            previous_filename: 'a.ts',
+            status: 'renamed',
+            additions: 0,
+            deletions: 0,
+          },
+        ],
+      })),
+    });
+    const file = (await provider.getDiff(PR))[0]!;
+    expect(file.status).toBe('renamed');
+    expect(file.previousPath).toBe('a.ts');
+  });
+});
+
+describe('GitHubContextProvider errors', () => {
+  it('tells an unauthenticated user how to raise the rate limit', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      })),
+    });
+    await expect(provider.getDiff(PR)).rejects.toThrow(/60 to 5,000/);
+  });
+
+  it('does not suggest a token to someone who already has one', async () => {
+    const provider = new GitHubContextProvider({
+      token: 'ghp_x',
+      fetchImpl: fakeFetch(() => ({
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      })),
+    });
+    await expect(provider.getDiff(PR)).rejects.toThrow(/Wait for the window/);
+  });
+
+  it('explains that a 404 may mean a private repo', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({ status: 404 })),
+    });
+    await expect(provider.getDiff(PR)).rejects.toThrow(/Private repositories/);
+  });
+});
+
+describe('GitHubContextProvider.getPr', () => {
+  it('returns the head sha and a null body as empty string', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({
+        body: { title: 'fix: debounce', body: null, head: { sha: 'deadbeef' } },
+      })),
+    });
+    const meta = await provider.getPr({ owner: 'a', repo: 'b', number: 1 });
+    expect(meta).toEqual({ title: 'fix: debounce', body: '', headSha: 'deadbeef' });
+  });
+});
+
+describe('GitHubContextProvider.searchCode', () => {
+  it('does not call the API when no repos are in scope', async () => {
+    let called = false;
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => {
+        called = true;
+        return { body: { items: [] } };
+      }),
+    });
+    expect(await provider.searchCode('useDebounce', [])).toEqual([]);
+    expect(called).toBe(false);
+  });
+});

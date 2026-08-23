@@ -1,0 +1,21 @@
+{
+  "name": "@lowdiff/extension",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch --mode development"
+  },
+  "dependencies": {
+    "@lowdiff/context": "0.0.1",
+    "@lowdiff/core": "0.0.1",
+    "@lowdiff/providers": "0.0.1",
+    "preact": "^10.25.4"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "vite": "^6.0.7"
+  }
+}

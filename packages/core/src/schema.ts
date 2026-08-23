@@ -1,0 +1,104 @@
+import type { Mode, NoteKind, RawNote } from './types.js';
+import { EXPLAIN_KINDS, REVIEW_KINDS } from './types.js';
+
+export const TITLE_MAX = 60;
+export const BODY_MAX = 600;
+
+/**
+ * The JSON Schema every provider enforces natively (Anthropic `output_config`,
+ * OpenAI structured outputs, Gemini `responseSchema`).
+ *
+ * This is the contract. It is deliberately the *same* schema for all three, so
+ * "does provider X hold the contract" is one test run three times rather than
+ * three prompts to tune separately.
+ */
+export function noteSchema(mode: Mode): Record<string, unknown> {
+  const kinds = mode === 'review' ? REVIEW_KINDS : EXPLAIN_KINDS;
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['summary', 'notes'],
+    properties: {
+      summary: {
+        type: 'string',
+        description: 'One paragraph on what this PR does and its main risk, if any.',
+        maxLength: 1200,
+      },
+      notes: {
+        type: 'array',
+        maxItems: mode === 'review' ? 8 : 30,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['kind', 'title', 'body', 'path', 'side', 'line', 'confidence'],
+          properties: {
+            kind: { type: 'string', enum: [...kinds] },
+            title: { type: 'string', maxLength: TITLE_MAX },
+            body: { type: 'string', maxLength: BODY_MAX },
+            code: { type: 'string', maxLength: BODY_MAX },
+            path: { type: 'string' },
+            side: { type: 'string', enum: ['LEFT', 'RIGHT'] },
+            line: { type: 'integer', minimum: 1 },
+            confidence: { type: 'string', enum: ['high', 'medium'] },
+          },
+        },
+      },
+    },
+  };
+}
+
+export interface ParsedResponse {
+  summary: string;
+  notes: RawNote[];
+}
+
+const SIDES = new Set(['LEFT', 'RIGHT']);
+const CONFIDENCES = new Set(['high', 'medium']);
+
+function isRawNote(value: unknown, kinds: readonly NoteKind[]): value is RawNote {
+  if (typeof value !== 'object' || value === null) return false;
+  const n = value as Record<string, unknown>;
+  return (
+    typeof n['kind'] === 'string' &&
+    (kinds as readonly string[]).includes(n['kind']) &&
+    typeof n['title'] === 'string' &&
+    n['title'].length > 0 &&
+    n['title'].length <= TITLE_MAX &&
+    typeof n['body'] === 'string' &&
+    n['body'].length > 0 &&
+    n['body'].length <= BODY_MAX &&
+    (n['code'] === undefined || typeof n['code'] === 'string') &&
+    typeof n['path'] === 'string' &&
+    typeof n['side'] === 'string' &&
+    SIDES.has(n['side']) &&
+    typeof n['line'] === 'number' &&
+    Number.isInteger(n['line']) &&
+    n['line'] >= 1 &&
+    typeof n['confidence'] === 'string' &&
+    CONFIDENCES.has(n['confidence'])
+  );
+}
+
+/**
+ * Validate a provider's JSON response.
+ *
+ * Providers enforce the schema server-side, but they don't all enforce it
+ * equally well, and a malformed note must never reach the overlay. Individual
+ * bad notes are dropped; a response with no usable shape at all throws.
+ */
+export function parseResponse(value: unknown, mode: Mode): ParsedResponse {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('model response was not an object');
+  }
+  const root = value as Record<string, unknown>;
+  if (typeof root['summary'] !== 'string') {
+    throw new Error('model response is missing a summary');
+  }
+  const rawNotes = Array.isArray(root['notes']) ? root['notes'] : [];
+  const kinds = mode === 'review' ? REVIEW_KINDS : EXPLAIN_KINDS;
+
+  return {
+    summary: root['summary'],
+    notes: rawNotes.filter((n): n is RawNote => isRawNote(n, kinds)),
+  };
+}

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&display=swap">
+<style>
+body{margin:0;background:#eef1f6;font-family:'DM Sans',system-ui,sans-serif}
+a{color:#5b5bd6}a:hover{color:#4a4ac2}
+@keyframes notePop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes chatUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(91,91,214,.35)}50%{box-shadow:0 0 0 6px rgba(91,91,214,0)}}
+</style>
+</helmet>
+
+<!-- browser frame -->
+<div style="max-width:1440px;margin:24px auto;margin-right:{{ pageRightGap }};border-radius:14px;background:#fff;position:relative;box-shadow:0 8px 30px rgba(20,30,60,.10);overflow:visible;transition:margin-right .2s ease">
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #e4e8ef;background:#f7f8fb;border-radius:14px 14px 0 0">
+    <span style="display:flex;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#f4726f"></span><span style="width:11px;height:11px;border-radius:50%;background:#f5b955"></span><span style="width:11px;height:11px;border-radius:50%;background:#61c46a"></span></span>
+    <span style="flex:1;max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e8ef;border-radius:999px;padding:5px 14px;font:11.5px ui-monospace,Menlo,monospace;color:#6b7280;text-align:center">github.com/acme/search-api/pull/412/files</span>
+    <span style="display:flex;align-items:center;gap:6px;background:#eceafd;color:#4a4ac2;border-radius:999px;padding:4px 11px;font:600 11px 'DM Sans',sans-serif">✦ diffscope on</span>
+  </div>
+
+  <!-- underlying PR page -->
+  <div>
+    <div style="padding:18px 28px 0;border-bottom:1px solid #e4e8ef">
+      <div style="font:600 19px/1.3 -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f2328">fix: debounce search requests <span style="font-weight:400;color:#656d76">#412</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0 12px;font:13px -apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#656d76">
+        <span style="background:#dafbe1;color:#1a7f37;border:1px solid #aceebb;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600">Open</span>
+        <span><b style="color:#1f2328">mchen</b> wants to merge 2 commits into <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#ddf4ff;color:#0969da;border-radius:5px;padding:1px 5px">main</span> from <span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#ddf4ff;color:#0969da;border-radius:5px;padding:1px 5px">fix/search-debounce</span></span>
+      </div>
+      <div style="display:flex;gap:4px;font:13px -apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
+        <span style="padding:8px 14px;color:#656d76">Conversation</span>
+        <span style="padding:8px 14px;color:#656d76">Commits <span style="background:#eff1f3;border-radius:999px;padding:0 7px;font-size:11px">2</span></span>
+        <span style="padding:8px 14px;color:#656d76">Checks</span>
+        <span style="padding:8px 14px;border-bottom:2px solid #fd8c73;font-weight:600;color:#1f2328">Files changed <span style="background:#eff1f3;border-radius:999px;padding:0 7px;font-size:11px">2</span></span>
+      </div>
+    </div>
+
+    <div style="padding:20px 28px 28px">
+
+      <!-- OVERLAY: AI review summary card -->
+      <div style="border:1px solid #ddd9f6;border-radius:12px;background:linear-gradient(180deg,#faf9ff,#fff);margin-bottom:20px;box-shadow:0 2px 10px rgba(91,91,214,.08);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+          <span style="width:26px;height:26px;border-radius:8px;background:#5b5bd6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none">✦</span>
+          <span style="font:700 13px 'DM Sans',sans-serif;color:#2a2a4a">AI review of this pull request</span>
+          <span style="display:flex;gap:6px;margin-left:8px;flex-wrap:wrap">
+            <span style="background:#fff1ef;color:#c4362a;border-radius:999px;padding:3px 10px;font:600 10.5px 'DM Sans',sans-serif">⚠ 1 risk</span>
+            <span style="background:#fff1ef;color:#c4362a;border-radius:999px;padding:3px 10px;font:600 10.5px 'DM Sans',sans-serif">🔒 1 security</span>
+            <span style="background:#fff7e8;color:#9a6700;border-radius:999px;padding:3px 10px;font:600 10.5px 'DM Sans',sans-serif">⚡ 1 breaking</span>
+            <span style="background:#eef1f6;color:#5a6472;border-radius:999px;padding:3px 10px;font:600 10.5px 'DM Sans',sans-serif">3 more notes</span>
+          </span>
+          <span style="margin-left:auto;font:11px 'DM Sans',sans-serif;color:#98a1ae">2 min ago</span>
+          <span onClick="{{ toggleSummary }}" style="cursor:pointer;color:#98a1ae;font-size:13px;padding:2px 6px;border-radius:6px" style-hover="background:#eef1f6;color:#2a2a4a">{{ summaryChevron }}</span>
+        </div>
+        <sc-if value="{{ summaryOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:0 16px 14px 52px;font:13px/1.65 'DM Sans',sans-serif;color:#3d4451;max-width:900px">Replaces per-keystroke fetching with a 300ms debounce and fixes the stale dependency array from #398. One unresolved risk: in-flight requests are not cancelled, so out-of-order responses can still surface stale results. The API client change removes a public parameter — downstream callers need review. <b style="color:#4a4ac2">Click the ✦ badges in the diff to see notes on specific lines.</b></div>
+        </sc-if>
+      </div>
+
+      <!-- files -->
+      <sc-for list="{{ files }}" as="file" hint-placeholder-count="2">
+        <div style="border:1px solid #e4e8ef;border-radius:10px;margin-bottom:18px;overflow:visible">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f6f8fa;border-bottom:1px solid #e4e8ef;border-radius:10px 10px 0 0;font:12px ui-monospace,Menlo,monospace">
+            <span style="color:#656d76">▾</span>
+            <span style="font-weight:600;color:#1f2328">{{ file.path }}</span>
+            <span style="color:#1a7f37">{{ file.plus }}</span><span style="color:#cf222e">{{ file.minus }}</span>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:7px;background:#faf9ff;border:1px solid #ddd9f6;border-radius:999px;padding:4px 12px;font:11px/1.4 'DM Sans',sans-serif;color:#3d4451;max-width:560px">
+              <span style="color:#5b5bd6;flex:none">✦</span>{{ file.summary }}
+            </span>
+          </div>
+          <div style="font:12px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace">
+            <div style="display:flex;background:#ddf4ff;color:#57606a;padding:2px 0"><span style="width:84px;flex:none"></span><span style="padding-left:12px">{{ file.hunk }}</span></div>
+            <sc-for list="{{ file.lines }}" as="ln" hint-placeholder-count="8">
+              <div style="position:relative">
+                <div style="display:flex;align-items:stretch;box-shadow:{{ ln.hlRing }}">
+                  <span style="width:42px;flex:none;text-align:right;padding-right:8px;color:#656d76;background:{{ ln.numBg }}">{{ ln.numL }}</span>
+                  <span style="width:42px;flex:none;text-align:right;padding-right:8px;color:#656d76;background:{{ ln.numBg }}">{{ ln.numR }}</span>
+                  <span style="flex:1;white-space:pre;padding-left:12px;background:{{ ln.bg }};color:#1f2328">{{ ln.text }}</span>
+                  <span style="width:34px;flex:none;display:flex;align-items:center;justify-content:center;background:{{ ln.bg }}">
+                    <sc-if value="{{ ln.note }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ ln.toggle }}" title="Show AI note" style="width:18px;height:18px;border-radius:50%;background:{{ ln.markerBg }};color:{{ ln.markerFg }};border:1.5px solid #5b5bd6;cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 10px 'DM Sans',sans-serif;animation:pulse 2.4s infinite" style-hover="transform:scale(1.25)">✦</span>
+                    </sc-if>
+                  </span>
+                </div>
+                <sc-if value="{{ ln.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;right:42px;top:100%;margin-top:6px;z-index:40;width:440px;max-width:calc(100% - 60px);background:#fff;border:1px solid #e4e8ef;border-radius:12px;box-shadow:0 12px 32px rgba(20,30,60,.16);animation:notePop .14s ease-out;font-family:'DM Sans',sans-serif;white-space:normal;overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:9px;padding:11px 14px;background:{{ ln.note.headBg }}">
+                      <span style="background:#fff;color:{{ ln.note.color }};border-radius:999px;padding:3px 10px;font:700 10px 'DM Sans',sans-serif;letter-spacing:.03em">{{ ln.note.kind }}</span>
+                      <span style="font:700 12.5px 'DM Sans',sans-serif;color:#2a2a4a">{{ ln.note.title }}</span>
+                      <span onClick="{{ ln.toggle }}" style="margin-left:auto;cursor:pointer;color:#98a1ae;font-size:13px;padding:2px 6px;border-radius:6px" style-hover="background:rgba(255,255,255,.6);color:#2a2a4a">✕</span>
+                    </div>
+                    <div style="padding:12px 14px;font:12.5px/1.6 'DM Sans',sans-serif;color:#3d4451">{{ ln.note.body }}</div>
+                    <sc-if value="{{ ln.note.code }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin:0 14px 12px;padding:9px 11px;background:#f6f8fa;border:1px solid #e4e8ef;border-radius:8px;font:11px/1.6 ui-monospace,Menlo,monospace;white-space:pre;color:#1f2328">{{ ln.note.code }}</div>
+                    </sc-if>
+                    <div style="display:flex;gap:8px;padding:0 14px 13px">
+                      <span onClick="{{ ln.askAI }}" style="background:#5b5bd6;color:#fff;border-radius:999px;padding:6px 14px;font:600 11.5px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#4a4ac2">💬 Ask about this</span>
+                      <span style="background:#eef1f6;color:#5a6472;border-radius:999px;padding:6px 14px;font:600 11.5px 'DM Sans',sans-serif;cursor:pointer" style-hover="background:#e2e7ee">Got it</span>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- OVERLAY: chat — floating popup or docked side panel -->
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="{{ chatShellStyle }}">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fff;border-bottom:1px solid #eef1f6">
+        <span style="width:20px;height:20px;border-radius:6px;background:#5b5bd6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px">✦</span>
+        <span style="font:700 12px 'DM Sans',sans-serif;color:#2a2a4a">Chat</span>
+        <span style="font:11px 'DM Sans',sans-serif;color:#98a1ae">PR #412</span>
+        <span onClick="{{ toggleChat }}" style="margin-left:auto;cursor:pointer;color:#98a1ae;font-size:12px;padding:2px 6px;border-radius:6px" style-hover="background:#f4f3fd;color:#2a2a4a">✕</span>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 16px 8px;display:flex;flex-direction:column;gap:14px;background:#fff" ref="{{ chatScrollRef }}">
+        <sc-for list="{{ messages }}" as="msg" hint-placeholder-count="2">
+          <div style="{{ msg.style }}">{{ msg.text }}<sc-if value="{{ msg.cite }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;background:#f4f3fd;color:#4a4ac2;border:1px solid #ddd9f6;border-radius:6px;padding:3px 9px;font:600 10.5px ui-monospace,Menlo,monospace;cursor:pointer">↗ {{ msg.cite }}</div></sc-if></div>
+        </sc-for>
+        <sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}">
+          <div style="font:11.5px 'DM Sans',sans-serif;color:#98a1ae">✦ thinking…</div>
+        </sc-if>
+      </div>
+      <div style="padding:8px 16px 4px;display:flex;gap:6px;flex-wrap:wrap;background:#fff">
+        <span onClick="{{ askWhy }}" style="border:1px solid #e4e8ef;color:#5a6472;border-radius:6px;padding:4px 10px;font:500 10.5px 'DM Sans',sans-serif;cursor:pointer" style-hover="border-color:#ddd9f6;color:#4a4ac2;background:#f4f3fd">Why debounce 300ms?</span>
+        <span onClick="{{ askRepo }}" style="border:1px solid #e4e8ef;color:#5a6472;border-radius:6px;padding:4px 10px;font:500 10.5px 'DM Sans',sans-serif;cursor:pointer" style-hover="border-color:#ddd9f6;color:#4a4ac2;background:#f4f3fd">Where else is this pattern used?</span>
+      </div>
+      <!-- composer: editor-style card with context chips + model row -->
+      <div style="padding:10px 14px 14px;background:#fff">
+        <div style="border:1px solid #ddd9f6;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(20,30,60,.05)" style-focus="border-color:#5b5bd6">
+          <div style="display:flex;gap:6px;padding:8px 10px 0;flex-wrap:wrap;position:relative">
+            <sc-for list="{{ contextChips }}" as="chip" hint-placeholder-count="2">
+              <span style="display:inline-flex;align-items:center;gap:4px;background:#f4f3fd;color:#4a4ac2;border-radius:5px;padding:2px 8px;font:600 10px ui-monospace,Menlo,monospace">@ {{ chip.label }}<sc-if value="{{ chip.remove }}" hint-placeholder-val="{{ false }}"><span onClick="{{ chip.remove }}" style="cursor:pointer;color:#98a1ae;margin-left:2px" style-hover="color:#c4362a">✕</span></sc-if></span>
+            </sc-for>
+            <span onClick="{{ toggleAddMenu }}" title="Add repos for context" style="color:#98a1ae;font:600 11px 'DM Sans',sans-serif;cursor:pointer;padding:1px 6px;border-radius:4px;border:1px solid #e4e8ef" style-hover="background:#f4f3fd;color:#4a4ac2;border-color:#ddd9f6">+</span>
+            <sc-if value="{{ addMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:8px;bottom:calc(100% + 6px);z-index:70;width:250px;background:#fff;border:1px solid #e4e8ef;border-radius:10px;box-shadow:0 10px 28px rgba(20,30,60,.16);animation:notePop .12s ease-out;overflow:hidden">
+                <div style="padding:8px 12px 6px;font:700 10px 'DM Sans',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#98a1ae">Add repos to context</div>
+                <sc-for list="{{ repoOptions }}" as="repo" hint-placeholder-count="3">
+                  <div onClick="{{ repo.add }}" style="display:flex;align-items:center;gap:8px;padding:7px 12px;font:11.5px ui-monospace,Menlo,monospace;color:#2a2a4a;cursor:pointer" style-hover="background:#f4f3fd">
+                    <span style="color:#5b5bd6">▦</span>{{ repo.name }}
+                    <span style="margin-left:auto;font:500 10px 'DM Sans',sans-serif;color:#98a1ae">{{ repo.meta }}</span>
+                  </div>
+                </sc-for>
+                <div style="padding:7px 12px;border-top:1px solid #eef1f6;font:600 11px 'DM Sans',sans-serif;color:#4a4ac2;cursor:pointer" style-hover="background:#f4f3fd">Search all repos…</div>
+              </div>
+            </sc-if>
+          </div>
+          <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="Ask anything about this PR…" style="width:100%;box-sizing:border-box;border:none;padding:10px 12px 6px;font:12.5px 'DM Sans',sans-serif;background:transparent;outline:none;color:#2a2a4a" />
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px 8px">
+            <span style="margin-left:auto;color:#98a1ae;font:500 10.5px 'DM Sans',sans-serif">↵ to send</span>
+            <span onClick="{{ send }}" style="width:26px;height:26px;border-radius:7px;background:#5b5bd6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer" style-hover="background:#4a4ac2">↑</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ fabVisible }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ toggleChat }}" title="{{ chatBtnLabel }}" style="position:fixed;right:36px;bottom:36px;z-index:60;width:54px;height:54px;border-radius:50%;background:linear-gradient(120deg,#5b5bd6,#7c5bd6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;box-shadow:0 8px 24px rgba(91,91,214,.4)" style-hover="transform:scale(1.08)">{{ chatBtnIcon }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    openNote: 'a4', chatOpen: true, docked: true, summaryOpen: true, input: '', typing: false,
+    addMenuOpen: false,
+    extraRepos: [],
+    messages: [
+      { role: 'ai', text: 'Hi! I’ve read through PR #412. Ask me anything about it — or click a ✦ badge in the diff to see my notes on specific lines.' }
+    ]
+  };
+  chatScrollRef = React.createRef();
+
+  files() {
+    // kind styling: color = text/accent, headBg = soft header tint
+    const K = {
+      RISK: { color: '#c4362a', headBg: '#fff1ef' },
+      SECURITY: { color: '#c4362a', headBg: '#fff1ef' },
+      BREAKING: { color: '#9a6700', headBg: '#fff7e8' },
+      PERF: { color: '#0969da', headBg: '#eaf4ff' },
+      EXPLAIN: { color: '#5a6472', headBg: '#eef1f6' },
+      SUGGESTION: { color: '#1a7f37', headBg: '#e9f8ec' }
+    };
+    const N = (kind, title, body, code) => ({ kind, title, body, code: code || null, ...K[kind] });
+    return [
+      {
+        path: 'src/search/useSearch.ts', plus: '+18', minus: '−7',
+        hunk: '@@ -24,8 +24,9 @@ export function useSearch',
+        summary: 'Swaps per-keystroke fetch for a 300ms debounce; fixes stale memo deps.',
+        lines: [
+          { id: 'a1', nL: '24', nR: '24', t: 'ctx', text: 'export function useSearch(query: string) {' },
+          { id: 'a2', nL: '25', nR: '', t: 'del', text: '-  const results = fetchResults(query);' },
+          { id: 'a3', nL: '', nR: '25', t: 'add', text: '+  const debounced = useDebounce(query, 300);',
+            note: N('PERF', 'Debounce cuts request volume',
+              'Per-keystroke fetching produced ~14 requests per search on average (analytics from #388). A 300ms debounce coalesces bursts into 1–2 requests.') },
+          { id: 'a4', nL: '', nR: '26', t: 'add', text: '+  const results = fetchResults(debounced);',
+            note: N('RISK', 'In-flight requests are not cancelled',
+              'Debounce delays the fetch but doesn’t abort earlier ones — a slow early response can overwrite a fast later one, showing stale results.',
+              'const ctrl = new AbortController();\nfetchResults(debounced, { signal: ctrl.signal });\nreturn () => ctrl.abort();') },
+          { id: 'a5', nL: '26', nR: '27', t: 'ctx', text: '  return useMemo(() => ({' },
+          { id: 'a6', nL: '', nR: '28', t: 'add', text: '+    results: results ?? [],',
+            note: N('EXPLAIN', 'Guards the undefined crash from #398',
+              'While the first debounced fetch is pending, results is undefined. The fallback to [] prevents the render crash reported in issue #398.') },
+          { id: 'a7', nL: '27', nR: '29', t: 'ctx', text: '    loading,' },
+          { id: 'a8', nL: '28', nR: '', t: 'del', text: '-  }), [query]);' },
+          { id: 'a9', nL: '', nR: '30', t: 'add', text: '+  }), [debounced, results]);',
+            note: N('SUGGESTION', 'Consider useDeferredValue',
+              'The dependency array is now correct. For long result lists, useDeferredValue(results) would keep typing responsive during large re-renders.') },
+          { id: 'a10', nL: '29', nR: '31', t: 'ctx', text: '}' }
+        ]
+      },
+      {
+        path: 'src/api/client.ts', plus: '+6', minus: '−4',
+        hunk: '@@ -58,9 +58,10 @@ export async function search',
+        summary: 'Removes public cacheKey param (breaking); fixes unencoded query string.',
+        lines: [
+          { id: 'b1', nL: '58', nR: '58', t: 'ctx', text: 'export async function search(' },
+          { id: 'b2', nL: '59', nR: '', t: 'del', text: '-  term: string, cacheKey?: string,' },
+          { id: 'b3', nL: '', nR: '59', t: 'add', text: '+  term: string,',
+            note: N('BREAKING', 'Public parameter removed',
+              'search() is exported from the package root. Removing cacheKey is a breaking change for external callers — 3 call sites in this repo still pass it (dead argument, silently ignored). Deprecate first or bump major.') },
+          { id: 'b4', nL: '60', nR: '60', t: 'ctx', text: '): Promise<SearchResult[]> {' },
+          { id: 'b5', nL: '61', nR: '', t: 'del', text: '-  const url = BASE + "/search?q=" + term;' },
+          { id: 'b6', nL: '', nR: '61', t: 'add', text: '+  const url = new URL("/search", BASE);',
+            note: N('SECURITY', 'Fixes unencoded query injection',
+              'The old string concatenation left term unencoded — special characters could alter the query string or path. URLSearchParams encodes correctly.') },
+          { id: 'b7', nL: '', nR: '62', t: 'add', text: '+  url.searchParams.set("q", term);' },
+          { id: 'b8', nL: '62', nR: '63', t: 'ctx', text: '  const res = await fetch(url);' },
+          { id: 'b9', nL: '63', nR: '64', t: 'ctx', text: '  return res.json();' }
+        ]
+      }
+    ];
+  }
+
+  lineView(ln) {
+    const t = ln.t;
+    const active = this.state.openNote === ln.id;
+    const bg = t === 'add' ? '#dafbe1' : t === 'del' ? '#ffebe9' : '#fff';
+    const numBg = t === 'add' ? '#aceebb' : t === 'del' ? '#ffcecb' : '#fff';
+    return {
+      numL: ln.nL, numR: ln.nR, text: ln.text, note: ln.note || null,
+      bg: active ? '#eceafd' : bg,
+      numBg: active ? '#ddd9f6' : numBg,
+      hlRing: active ? 'inset 0 0 0 2px #5b5bd6' : 'none',
+      markerBg: active ? '#5b5bd6' : '#fff',
+      markerFg: active ? '#fff' : '#5b5bd6',
+      open: active && !!ln.note,
+      toggle: () => this.setState(s => ({ openNote: s.openNote === ln.id ? null : ln.id })),
+      askAI: () => {
+        this.setState({ openNote: null, chatOpen: true });
+        this.reply('Tell me more about: ' + (ln.note ? ln.note.title : ''),
+          ln.note && ln.note.kind === 'RISK'
+            ? 'The debounce fix solves request volume but not ordering. If two fetches overlap, whichever resolves last wins — even if it was issued first. An AbortController tied to the debounced value (see the suggested fix) cancels the earlier request, so the UI always reflects the latest query.'
+            : 'This note combines the diff with repo context — related issues, call sites, and the module’s test coverage. Happy to go deeper on any part of it.');
+      }
+    };
+  }
+
+  reply(userText, aiText, cite) {
+    this.setState(s => ({ messages: [...s.messages, { role: 'user', text: userText }], typing: true, input: '' }));
+    setTimeout(() => {
+      this.setState(s => ({ messages: [...s.messages, { role: 'ai', text: aiText, cite: cite || null }], typing: false }));
+    }, 700);
+  }
+
+  doSend() {
+    const q = this.state.input.trim();
+    if (!q) return;
+    this.reply(q, 'In a live build I’d answer from the diff plus repo context (issues, call sites, blame history). This mockup has canned answers — try the two suggested questions below the thread.');
+  }
+
+  componentDidUpdate() {
+    const el = this.chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+
+  renderVals() {
+    const files = this.files().map(f => ({ ...f, lines: f.lines.map(l => this.lineView(l)) }));
+    const msgStyle = role => role === 'user'
+      ? { width: '100%', boxSizing: 'border-box', background: '#f4f3fd', border: '1px solid #ddd9f6', padding: '9px 12px', borderRadius: '8px', font: '12.5px/1.55 "DM Sans",sans-serif', color: '#2a2a4a' }
+      : { width: '100%', boxSizing: 'border-box', padding: '0 2px', font: '12.5px/1.65 "DM Sans",sans-serif', color: '#3d4451' };
+    const docked = this.state.docked;
+    const chatShellStyle = { position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 60, width: '400px', display: 'flex', flexDirection: 'column', background: '#fff', boxShadow: '-8px 0 32px rgba(20,30,60,.14)', animation: 'chatUp .18s ease-out', overflow: 'hidden', borderLeft: '1px solid #e4e8ef' };
+    const allRepos = [
+      { name: 'acme/search-ui', meta: 'frontend' },
+      { name: 'acme/api-gateway', meta: 'consumes search()' },
+      { name: 'acme/mobile-app', meta: 'consumes search()' },
+      { name: 'acme/shared-hooks', meta: 'owns useDebounce' }
+    ];
+    const contextChips = [
+      { label: 'PR #412' },
+      { label: '2 files changed' },
+      ...this.state.extraRepos.map(r => ({
+        label: r,
+        remove: () => this.setState(s => ({ extraRepos: s.extraRepos.filter(x => x !== r) }))
+      }))
+    ];
+    const repoOptions = allRepos.filter(r => !this.state.extraRepos.includes(r.name)).map(r => ({
+      ...r,
+      add: () => this.setState(s => ({ extraRepos: [...s.extraRepos, r.name], addMenuOpen: false }))
+    }));
+    return {
+      files,
+      chatShellStyle,
+      contextChips, repoOptions,
+      addMenuOpen: this.state.addMenuOpen,
+      toggleAddMenu: () => this.setState(s => ({ addMenuOpen: !s.addMenuOpen })),
+      fabVisible: !this.state.chatOpen,
+      pageRightGap: this.state.chatOpen ? '424px' : 'auto',
+      summaryOpen: this.state.summaryOpen,
+      summaryChevron: this.state.summaryOpen ? '▴' : '▾',
+      toggleSummary: () => this.setState(s => ({ summaryOpen: !s.summaryOpen })),
+      chatOpen: this.state.chatOpen,
+      chatBtnLabel: this.state.chatOpen ? 'Hide chat' : 'Ask AI',
+      chatBtnIcon: this.state.chatOpen ? '✕' : '💬',
+      toggleChat: () => this.setState(s => ({ chatOpen: !s.chatOpen })),
+      messages: this.state.messages.map(m => ({ ...m, style: msgStyle(m.role) })),
+      typing: this.state.typing,
+      input: this.state.input,
+      onInput: e => this.setState({ input: e.target.value }),
+      onKey: e => { if (e.key === 'Enter') this.doSend(); },
+      send: () => this.doSend(),
+      chatScrollRef: this.chatScrollRef,
+      askWhy: () => this.reply('Why debounce 300ms?',
+        '300ms matches the existing autocomplete debounce in useAutocomplete.ts:41, so search feels consistent. Analytics from #388 showed a p50 keystroke gap of ~180ms — 300ms coalesces most typing bursts without feeling laggy.', 'useAutocomplete.ts:41'),
+      askRepo: () => this.reply('Where else is this pattern used?',
+        'useDebounce appears in 3 other places: useAutocomplete.ts (300ms), FilterBar.tsx (250ms), and useSaveDraft.ts (1000ms). This PR brings search in line with the rest of the app.', 'useAutocomplete.ts:41')
+    };
+  }
+}
+</script>
+</body>
+</html>
