@@ -1,15 +1,39 @@
 import type { Note } from '@lowdiff/core';
 import type { DiffDom } from './dom/index.js';
-import { KIND_STYLE } from './theme.js';
 import { SPARKLE_SVG } from './components/Sparkle.js';
 
 // Badges live in GitHub's page, not our shadow root, so they cannot read the
 // --ld-* variables defined on :host. They use Primer's variables directly.
 const ACCENT = 'var(--fgColor-accent, #5b5bd6)';
+
+/**
+ * Kind colours for badges, in PRIMER variables. KIND_STYLE from the theme is
+ * scoped to our shadow root's :host — in the page those vars are undefined,
+ * so borders fell back to the text colour and the glow's color-mix dropped
+ * silently. Everything here must resolve in GitHub's own context.
+ */
+const KIND_COLOR: Record<string, string> = {
+  RISK: 'var(--fgColor-danger, #d1242f)',
+  SECURITY: 'var(--fgColor-danger, #d1242f)',
+  BREAKING: 'var(--fgColor-attention, #9a6700)',
+  PERF: 'var(--fgColor-accent, #0969da)',
+  SUGGESTION: 'var(--fgColor-success, #1a7f37)',
+  EXPLAIN: 'var(--fgColor-muted, #59636e)',
+};
+const kindColor = (kind: string): string => KIND_COLOR[kind] ?? KIND_COLOR['EXPLAIN']!;
 // Translucent so GitHub's own add/delete row colours still read through.
 const HIGHLIGHT_WASH = 'color-mix(in srgb, var(--fgColor-accent, #5b5bd6) 10%, transparent)';
 
 const BADGE_ATTR = 'data-lowdiff-badge';
+
+/**
+ * Soft halo in the note's own colour, so an unopened badge is visible against
+ * both diff backgrounds and its kind is readable at a glance. color-mix keeps
+ * it translucent while the colour itself stays a theme variable.
+ */
+function glowFor(color: string): string {
+  return `0 0 0 1px color-mix(in srgb, ${color} 40%, transparent), 0 0 8px 2px color-mix(in srgb, ${color} 55%, transparent)`;
+}
 
 export interface BadgeTarget {
   note: Note;
@@ -127,20 +151,21 @@ export function clearBadges(): void {
 /** Highlight the badge whose note is currently open. */
 export function setActiveBadge(active: HTMLElement | null): void {
   for (const el of document.querySelectorAll<HTMLElement>(`[${BADGE_ATTR}]`)) {
-    const kind = el.getAttribute('data-lowdiff-kind') ?? 'EXPLAIN';
-    const style = KIND_STYLE[kind] ?? KIND_STYLE['EXPLAIN']!;
+    const color = kindColor(el.getAttribute('data-lowdiff-kind') ?? 'EXPLAIN');
     const on = el === active;
     // The outer element is only the hit area; paint the inner dot.
     const visual = el.firstElementChild;
     if (!(visual instanceof HTMLElement)) continue;
     visual.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
-    visual.style.color = on ? '#fff' : style.color;
+    visual.style.color = on ? '#fff' : color;
+    visual.style.border = `1.5px solid ${on ? ACCENT : color}`;
+    visual.style.boxShadow = glowFor(on ? ACCENT : color);
     visual.style.transform = on ? 'scale(1.2)' : 'none';
   }
 }
 
 function createBadge(note: Note): HTMLElement {
-  const style = KIND_STYLE[note.kind] ?? KIND_STYLE['EXPLAIN']!;
+  const color = kindColor(note.kind);
   const badge = document.createElement('span');
   badge.setAttribute(BADGE_ATTR, '');
   badge.setAttribute('data-lowdiff-kind', note.kind);
@@ -183,9 +208,10 @@ function createBadge(note: Note): HTMLElement {
     width: '15px',
     height: '15px',
     borderRadius: '50%',
-    border: `1.5px solid ${ACCENT}`,
+    border: `1.5px solid ${color}`,
     background: 'var(--bgColor-default, #fff)',
-    color: style.color,
+    color: color,
+    boxShadow: glowFor(color),
     font: '700 10px -apple-system, BlinkMacSystemFont, sans-serif',
     lineHeight: '1',
     pointerEvents: 'none',

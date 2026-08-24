@@ -205,6 +205,19 @@ console.log(JSON.stringify({ ...state, popover, filtered }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 
+{
+  // Close-up of one badge and its surroundings, for eyeballing the glow.
+  const badge = page.locator('[data-lowdiff-badge]').first();
+  const box = await badge.boundingBox();
+  if (box) {
+    await page.screenshot({
+      path: '/tmp/lowdiff-badge-closeup.png',
+      clip: { x: Math.max(0, box.x - 60), y: Math.max(0, box.y - 25), width: 260, height: 80 },
+    });
+    console.log('closeup → /tmp/lowdiff-badge-closeup.png');
+  }
+}
+
 if (shot) {
   await page.screenshot({ path: shot });
   console.log(`\nscreenshot → ${shot}`);
