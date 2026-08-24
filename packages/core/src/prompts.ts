@@ -21,9 +21,10 @@ Writing rules:
   that matters most, if any. Do not restate the diff, list every finding, or
   explain your reasoning. A reviewer reads this in five seconds.
 - title: under 60 characters, states the finding, not the file.
-- body: under 600 characters, and shorter is better. Say what is wrong and why
-  it matters, then stop. No preamble, no restating the line, no summarising
-  what you just said.
+- body: under 600 characters, and shorter is better. Lead with the consequence
+  in plain language — what breaks, for whom — then the mechanism. Write for a
+  reader who does not know the flags, APIs, or jargon involved: one concrete
+  example beats an abstract rule. No preamble, no restating the line.
 - body: may use fenced code blocks and \`backticks\`; both are rendered.
 - code: only when you can give a concrete fix. Omit it otherwise.
 - confidence: "high" only when the diff alone proves it. Use "medium" when the
