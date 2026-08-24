@@ -3,72 +3,66 @@ import type { DiffDom, DomLine, Side } from './types.js';
 /**
  * GitHub's client-rendered diff (the `/changes` tab).
  *
- * Rolled out per-account, so it cannot be observed while logged out. The
- * selectors below are ordered most-specific first and the adapter reports no
- * lines rather than guessing when none of them match — a wrong row is worse
- * than no badge.
+ * Every class name in this view is a build-hashed CSS module
+ * (`DiffComparisonViewer-module__Container__YGBgR`) that changes on each
+ * GitHub deploy, so nothing here keys off class names. The `data-*` hooks
+ * below are stable and semantic:
+ *
+ *   table[role=grid][aria-label="Diff for: <path>"]   one per file
+ *     td[data-line-number][data-diff-side]            two cells per line
+ *       - the line-number cell carries data-first-unified-line-number-cell
+ *       - the code cell carries data-line-anchor
+ *
+ * `data-diff-side` is lowercase here ("right"), unlike the note anchors we
+ * store, which use GitHub's API casing ("RIGHT").
  */
-const FILE_SELECTORS = [
-  '[data-testid="diff-file"]',
-  '[data-file-path]',
-  'div[id^="diff-"][data-path]',
-];
+const FILE_SELECTOR = 'table[role="grid"][aria-label]';
+const LABEL_PREFIX = 'Diff for: ';
 
-const PATH_ATTRS = ['data-file-path', 'data-path', 'data-tagsearch-path'];
-
-function fileElements(): HTMLElement[] {
-  for (const selector of FILE_SELECTORS) {
-    const found = [...document.querySelectorAll(selector)].filter(
-      (el): el is HTMLElement => el instanceof HTMLElement,
-    );
-    if (found.length > 0) return found;
-  }
-  return [];
+function fileTables(): HTMLTableElement[] {
+  return [...document.querySelectorAll(FILE_SELECTOR)]
+    .filter((el): el is HTMLTableElement => el instanceof HTMLTableElement)
+    .filter((el) => (el.getAttribute('aria-label') ?? '').startsWith(LABEL_PREFIX));
 }
 
-function pathOf(el: HTMLElement): string | null {
-  for (const attr of PATH_ATTRS) {
-    const value = el.getAttribute(attr);
-    if (value) return value;
-  }
-  return null;
+function pathOf(table: HTMLTableElement): string {
+  return (table.getAttribute('aria-label') ?? '').slice(LABEL_PREFIX.length).trim();
 }
 
 export const modernDom: DiffDom = {
   name: 'modern',
 
   matches(): boolean {
-    return fileElements().some((el) => pathOf(el) !== null);
+    return fileTables().length > 0;
   },
 
   paths(): string[] {
-    return fileElements()
-      .map(pathOf)
-      .filter((p): p is string => Boolean(p));
+    return fileTables().map(pathOf).filter(Boolean);
   },
 
   lines(path: string): DomLine[] {
-    const file = fileElements().find((el) => pathOf(el) === path);
-    if (!file) return [];
+    const table = fileTables().find((t) => pathOf(t) === path);
+    if (!table) return [];
 
     const out: DomLine[] = [];
-    for (const row of file.querySelectorAll('[data-line-number], .react-line-number')) {
-      if (!(row instanceof HTMLElement)) continue;
-      const raw = row.getAttribute('data-line-number') ?? row.textContent?.trim() ?? '';
-      const line = Number(raw);
+    // The code cell is the one carrying data-line-anchor; its sibling with the
+    // same line number is the gutter, which has no room for a badge.
+    for (const cell of table.querySelectorAll('[data-line-number][data-line-anchor]')) {
+      if (!(cell instanceof HTMLElement)) continue;
+
+      const line = Number(cell.getAttribute('data-line-number'));
       if (!Number.isInteger(line) || line < 1) continue;
 
-      const container = row.closest<HTMLElement>('[data-testid="diff-row"], tr, .diff-line-row');
-      if (!container) continue;
+      const side: Side =
+        cell.getAttribute('data-diff-side')?.toLowerCase() === 'left' ? 'LEFT' : 'RIGHT';
 
-      const codeCell =
-        container.querySelector<HTMLElement>('[data-testid="diff-line-content"], .diff-text, td:last-child') ??
-        container;
-
-      // The newer view marks deletions on the left column; without an explicit
-      // marker we treat the row as right-side, which is where notes usually go.
-      const side: Side = row.getAttribute('data-side') === 'LEFT' ? 'LEFT' : 'RIGHT';
-      out.push({ side, line, row: container, codeCell });
+      const row = cell.closest('tr');
+      out.push({
+        side,
+        line,
+        row: row instanceof HTMLElement ? row : cell,
+        codeCell: cell,
+      });
     }
     return out;
   },

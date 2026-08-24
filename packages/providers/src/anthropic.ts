@@ -9,6 +9,7 @@ import type {
   ProviderConfig,
 } from './types.js';
 import { DEFAULT_MODELS } from './types.js';
+import { toAnthropicJsonSchema } from './schema-dialects.js';
 import { chatSystemPrompt, chatUserPrompt } from './chat-prompt.js';
 
 /**
@@ -52,7 +53,9 @@ export class AnthropicClient implements LlmClient {
         messages: [
           { role: 'user', content: userPrompt(req.files, req.title, req.body) },
         ],
-        output_format: { type: 'json_schema', schema: noteSchema(req.mode) },
+        output_config: {
+          format: { type: 'json_schema', schema: toAnthropicJsonSchema(noteSchema(req.mode)) },
+        },
       },
       req.signal ? { signal: req.signal } : {},
     );

@@ -18,6 +18,8 @@ interface Open {
   left: number;
 }
 
+const POPOVER_WIDTH = 440;
+
 /**
  * Owns the summary card, the note popover, and the chat panel.
  *
@@ -43,14 +45,25 @@ export function Overlay({ pr }: Props) {
   const notesRef = useRef<Note[]>([]);
   notesRef.current = notes;
 
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
   const select = useCallback((note: Note, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
+    // Coordinates are relative to `.root`, which is the popover's containing
+    // block — page coordinates would be offset by whatever GitHub positions
+    // around us.
+    const base = rootRef.current?.getBoundingClientRect();
+    if (!base) return;
+
     setActiveBadge(element);
     setOpen({
       note,
-      top: rect.bottom + window.scrollY + 8,
-      // Right-align the 440px popover to the badge, clamped to the viewport.
-      left: Math.max(12, Math.min(rect.right + window.scrollX - 440, window.innerWidth - 452)),
+      top: rect.bottom - base.top + 8,
+      // Right-align the 440px popover to the badge, clamped to the page width.
+      left: Math.max(
+        12 - base.left,
+        Math.min(rect.right - base.left - POPOVER_WIDTH, window.innerWidth - base.left - 452),
+      ),
     });
   }, []);
 
@@ -165,7 +178,7 @@ export function Overlay({ pr }: Props) {
   const notesLost = notes.length - placed;
 
   return (
-    <div class="root">
+    <div class="root" ref={rootRef}>
       <SummaryCard
         summary={error ?? summary}
         notes={notes}
@@ -198,7 +211,7 @@ export function Overlay({ pr }: Props) {
         <div
           style={{
             position: 'absolute', top: `${open.top}px`, left: `${open.left}px`,
-            width: '440px', zIndex: 2147483000,
+            width: `${POPOVER_WIDTH}px`, zIndex: 2147483000,
           }}
         >
           <NotePopover

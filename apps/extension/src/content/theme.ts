@@ -36,6 +36,10 @@ export const STYLES = `
   font-family: 'DM Sans', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   color: ${C.body};
   margin: 0 0 20px;
+  /* Containing block for the note popover. Without this the popover resolves
+     against whichever ancestor GitHub happens to position, and lands offset by
+     that element's page offset. */
+  position: relative;
 }
 @keyframes notePop { from { opacity: 0; transform: translateY(-6px) scale(.98) } to { opacity: 1; transform: none } }
 @keyframes chatUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }

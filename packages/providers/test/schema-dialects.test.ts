@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { noteSchema } from '@lowdiff/core';
-import { toStrictJsonSchema } from '../src/schema-dialects.js';
+import { toAnthropicJsonSchema, toStrictJsonSchema } from '../src/schema-dialects.js';
 
 const strict = toStrictJsonSchema(noteSchema('explain')) as any;
 const note = strict.properties.notes.items;
@@ -39,5 +39,33 @@ describe('toStrictJsonSchema', () => {
     toStrictJsonSchema(original);
     expect(original.properties.notes.items.required).not.toContain('code');
     expect(original.properties.notes.items.properties.title.maxLength).toBe(60);
+  });
+});
+
+const anthropic = toAnthropicJsonSchema(noteSchema('explain')) as any;
+const anthropicNote = anthropic.properties.notes.items;
+
+describe('toAnthropicJsonSchema', () => {
+  it('strips the constraint keywords structured outputs reject', () => {
+    expect(anthropic.properties.summary.maxLength).toBeUndefined();
+    expect(anthropic.properties.notes.maxItems).toBeUndefined();
+    expect(anthropicNote.properties.line.minimum).toBeUndefined();
+  });
+
+  it('keeps optional properties optional', () => {
+    expect(anthropicNote.required).not.toContain('code');
+  });
+
+  it('preserves enums and additionalProperties', () => {
+    expect(anthropicNote.properties.side.enum).toEqual(['LEFT', 'RIGHT']);
+    expect(anthropic.additionalProperties).toBe(false);
+    expect(anthropicNote.additionalProperties).toBe(false);
+  });
+
+  it('does not mutate the input schema', () => {
+    const original = noteSchema('explain') as any;
+    toAnthropicJsonSchema(original);
+    expect(original.properties.notes.maxItems).toBe(30);
+    expect(original.properties.notes.items.properties.line.minimum).toBe(1);
   });
 });
