@@ -114,16 +114,42 @@ const memory = new Map<string, unknown>();
     connect: () => ({
       onMessage: {
         addListener: (fn: (d: unknown) => void) => {
+          // A realistic answer: prose, inline code, and two fenced alternatives.
+          const reply = [
+            'The `strategy` block contains only `max-parallel: 5` and no `matrix:` key,',
+            'so `build-linux` expands to exactly one job. Capping concurrency at 5 over',
+            'a set of size 1 is a no-op.',
+            '',
+            'Drop it:',
+            '```yaml',
+            '  build-linux:',
+            '    runs-on: ubuntu-latest',
+            '    steps:',
+            '      ...',
+            '```',
+            '',
+            'Or make it meaningful:',
+            '```yaml',
+            '    strategy:',
+            '      max-parallel: 5',
+            '      matrix:',
+            "        python-version: ['3.10', '3.11', '3.12']",
+            '```',
+            '',
+            'Note that a matrix also needs `${{ matrix.python-version }}` wired into the',
+            'setup step.',
+          ].join('\n');
+
+          const chunks = reply.match(/[\s\S]{1,24}/g) ?? [];
           let i = 0;
-          const words = 'This is a fixture reply streamed back word by word. '.split(' ');
           const timer = setInterval(() => {
-            if (i >= words.length) {
+            if (i >= chunks.length) {
               clearInterval(timer);
               fn({ type: 'done' });
               return;
             }
-            fn({ type: 'text', text: words[i++] + ' ' });
-          }, 60);
+            fn({ type: 'text', text: chunks[i++] });
+          }, 25);
         },
       },
       disconnect: () => {},

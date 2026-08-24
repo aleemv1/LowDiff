@@ -1,5 +1,7 @@
 import type { Note } from '@lowdiff/core';
 import { C, KIND_STYLE } from '../theme.js';
+import { Markdown } from './Markdown.js';
+import { CodeBlock } from './CodeBlock.js';
 
 interface Props {
   note: Note;
@@ -7,6 +9,16 @@ interface Props {
   floating?: boolean;
   onClose: () => void;
   onAsk: (note: Note) => void;
+}
+
+/** Best-effort language for highlighting, from the file the note is on. */
+function languageFor(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase() ?? '';
+  const byExt: Record<string, string> = {
+    yml: 'yaml', yaml: 'yaml', json: 'json', sh: 'bash', bash: 'bash',
+    py: 'python', ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
+  };
+  return byExt[ext] ?? '';
 }
 
 export function NotePopover({ note, floating, onClose, onAsk }: Props) {
@@ -58,21 +70,13 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
         </span>
       </div>
 
-      <div style={{ padding: '12px 14px', font: `12.5px/1.6 'DM Sans',sans-serif`, color: C.body }}>
-        {note.body}
+      <div style={{ padding: '12px 14px', color: C.body }}>
+        <Markdown text={note.body} font="12.5px/1.6 inherit" />
       </div>
 
       {note.code && (
-        <div
-          class="mono"
-          style={{
-            margin: '0 14px 12px', padding: '9px 11px', background: '#f6f8fa',
-            border: `1px solid ${C.line}`, borderRadius: '8px',
-            font: '11px/1.6 ui-monospace,Menlo,monospace', whiteSpace: 'pre', color: C.ghInk,
-            overflowX: 'auto',
-          }}
-        >
-          {note.code}
+        <div style={{ padding: '0 14px' }}>
+          <CodeBlock code={note.code} lang={languageFor(note.anchor.path)} />
         </div>
       )}
 

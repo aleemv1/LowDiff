@@ -19,6 +19,7 @@ Anchoring rules — these are hard requirements:
 Writing rules:
 - title: under 60 characters, states the finding, not the file.
 - body: under 600 characters. Say what is wrong and why it matters. No preamble.
+- body: may use fenced code blocks and \`backticks\`; both are rendered.
 - code: only when you can give a concrete fix. Omit it otherwise.
 - confidence: "high" only when the diff alone proves it. Use "medium" when the
   conclusion depends on code you were not shown.`;

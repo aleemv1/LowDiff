@@ -40,6 +40,8 @@ your earlier review of it are below.
   shown, say so rather than guessing.
 - Cite locations as path:line when referring to specific code.
 - Be brief. Answer the question asked; do not summarise the whole PR.
+- Put code in fenced blocks with a language tag, and identifiers in backticks.
+  Both are rendered.
 - When the question refers to one of your findings, build on it rather than
   repeating it back.
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { C } from '../theme.js';
+import { Markdown } from './Markdown.js';
 import type { ChatTurn } from '../../shared/messages.js';
 
 interface Props {
@@ -50,11 +51,18 @@ export function ChatPanel(props: Props) {
             key={i}
             style={
               msg.role === 'user'
-                ? { width: '100%', background: C.accentTint, border: `1px solid ${C.accentBorder}`, padding: '9px 12px', borderRadius: '8px', font: `12.5px/1.55 'DM Sans',sans-serif`, color: C.ink, whiteSpace: 'pre-wrap' }
-                : { width: '100%', padding: '0 2px', font: `12.5px/1.65 'DM Sans',sans-serif`, color: C.body, whiteSpace: 'pre-wrap' }
+                ? {
+                    width: '100%',
+                    background: C.accentTint,
+                    border: `1px solid ${C.accentBorder}`,
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    color: C.ink,
+                  }
+                : { width: '100%', padding: '0 2px', color: C.body }
             }
           >
-            {msg.content}
+            <Markdown text={msg.content} font="12.5px/1.6 inherit" />
           </div>
         ))}
         {props.typing && (
