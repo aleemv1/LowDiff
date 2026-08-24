@@ -182,7 +182,26 @@ const popover = await page.evaluate(() => {
   };
 });
 
-console.log(JSON.stringify({ ...state, popover }, null, 2));
+// Toggle a kind off via settings, as the popup does, and confirm the overlay
+// reacts without any reload.
+await worker.evaluate(async () => {
+  const stored = await chrome.storage.local.get('lowdiff:settings');
+  await chrome.storage.local.set({
+    'lowdiff:settings': { ...stored['lowdiff:settings'], hiddenKinds: ['RISK'] },
+  });
+});
+await page.waitForTimeout(1600);
+
+const filtered = await page.evaluate(() => {
+  const badges = [...document.querySelectorAll('[data-lowdiff-badge]')];
+  const host = document.getElementById('lowdiff-root');
+  return {
+    badgeKindsAfterHide: badges.map((b) => b.getAttribute('data-lowdiff-kind')),
+    hiddenNotice: (host?.shadowRoot?.textContent ?? '').includes('hidden by your annotation'),
+  };
+});
+
+console.log(JSON.stringify({ ...state, popover, filtered }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 

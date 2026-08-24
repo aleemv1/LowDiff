@@ -8,7 +8,7 @@ import { render } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
-import type { Mode } from '@lowdiff/core';
+import type { Mode, NoteKind } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
@@ -17,6 +17,15 @@ const PROVIDERS: { id: ProviderId; label: string; models: string[] }[] = [
   { id: 'anthropic', label: 'Anthropic', models: ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'] },
   { id: 'openai', label: 'OpenAI', models: ['gpt-5.5', 'gpt-5.5-mini'] },
   { id: 'google', label: 'Google', models: ['gemini-3.7-flash', 'gemini-3.7-pro'] },
+];
+
+const KINDS: { kind: NoteKind; label: string; color: string }[] = [
+  { kind: 'SECURITY', label: '🔒 Security', color: '#c4362a' },
+  { kind: 'RISK', label: '⚠ Risk', color: '#c4362a' },
+  { kind: 'BREAKING', label: '⚡ Breaking', color: '#9a6700' },
+  { kind: 'PERF', label: 'Perf', color: '#0969da' },
+  { kind: 'SUGGESTION', label: 'Suggestion', color: '#1a7f37' },
+  { kind: 'EXPLAIN', label: 'Explain', color: '#59636e' },
 ];
 
 const T = {
@@ -126,6 +135,41 @@ function Popup() {
           </option>
         ))}
       </select>
+
+      <label style={label}>ANNOTATIONS</label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+        {KINDS.map(({ kind, label: text, color }) => {
+          const hidden = (settings.hiddenKinds ?? []).includes(kind);
+          return (
+            <button
+              key={kind}
+              title={hidden ? 'Hidden — click to show' : 'Shown — click to hide'}
+              onClick={() => {
+                const current = settings.hiddenKinds ?? [];
+                update({
+                  hiddenKinds: hidden ? current.filter((k) => k !== kind) : [...current, kind],
+                });
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                font: '600 10.5px inherit',
+                border: `1px solid ${hidden ? T.line : color}`,
+                background: hidden ? 'transparent' : T.tint,
+                color: hidden ? T.muted : color,
+                opacity: hidden ? 0.6 : 1,
+                textDecoration: hidden ? 'line-through' : 'none',
+              }}
+            >
+              {text}
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ margin: '6px 0 0', font: '10px/1.5 inherit', color: T.muted }}>
+        Hiding a kind filters the overlay instantly — nothing is re-run.
+      </p>
 
       <label style={label}>MODE</label>
       <div style={{ display: 'flex', gap: '6px' }}>

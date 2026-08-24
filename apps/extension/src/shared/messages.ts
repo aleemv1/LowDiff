@@ -1,4 +1,4 @@
-import type { Mode, Note } from '@lowdiff/core';
+import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import type { ProviderId } from '@lowdiff/providers/types';
 
 export interface Settings {
@@ -10,6 +10,11 @@ export interface Settings {
   /** Set per provider; never leaves the service worker. */
   keys: Partial<Record<ProviderId, string>>;
   defaultMode: Mode;
+  /**
+   * Note kinds hidden from the overlay. Stored as the negative so new kinds
+   * added later default to visible instead of silently vanishing.
+   */
+  hiddenKinds?: NoteKind[] | undefined;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -24,6 +29,7 @@ export interface PublicSettings {
   model?: string | undefined;
   defaultMode: Mode;
   configured: boolean;
+  hiddenKinds: NoteKind[];
 }
 
 export interface PrLocation {

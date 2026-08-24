@@ -27,5 +27,6 @@ export function toPublicSettings(settings: Settings): PublicSettings {
     ...(settings.model !== undefined ? { model: settings.model } : {}),
     defaultMode: settings.defaultMode,
     configured: Boolean(settings.keys[settings.provider]),
+    hiddenKinds: settings.hiddenKinds ?? [],
   };
 }

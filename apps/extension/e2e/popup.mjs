@@ -33,10 +33,12 @@ await worker.evaluate(async () => {
 
 const id = new URL(worker.url()).host;
 await page.goto(`chrome-extension://${id}/popup.html`, { waitUntil: 'domcontentloaded' });
-await page.setViewportSize({ width: 320, height: 420 });
+await page.setViewportSize({ width: 320, height: 560 });
 await page.waitForTimeout(400);
 
-// Switch provider, pick a model, and read back what persisted.
+// Hide two kinds, switch provider, pick a model; read back what persisted.
+await page.click('button:has-text("Explain")>>nth=0').catch(() => {});
+await page.click('button:has-text("Suggestion")');
 await page.click('button:has-text("Google")');
 await page.waitForTimeout(200);
 await page.selectOption('select', 'gemini-3.7-pro');
@@ -45,7 +47,7 @@ await page.waitForTimeout(200);
 const persisted = await worker.evaluate(async () => {
   const stored = await chrome.storage.local.get('lowdiff:settings');
   const s = stored['lowdiff:settings'];
-  return { provider: s.provider, model: s.model, mode: s.defaultMode };
+  return { provider: s.provider, model: s.model, mode: s.defaultMode, hidden: s.hiddenKinds };
 });
 console.log('persisted after clicks:', JSON.stringify(persisted));
 

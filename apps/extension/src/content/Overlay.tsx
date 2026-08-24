@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import type { Mode, Note } from '@lowdiff/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
@@ -32,6 +32,7 @@ export function Overlay({ pr }: Props) {
   const [mode, setMode] = useState<Mode>('review');
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
+  const [hiddenKinds, setHiddenKinds] = useState<NoteKind[]>([]);
   const [cached, setCached] = useState(false);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,13 @@ export function Overlay({ pr }: Props) {
   const [activity, setActivity] = useState<string | null>(null);
   const [usage, setUsage] = useState<string | null>(null);
   const [repos, setRepos] = useState<string[]>([]);
+
+  // What the overlay actually shows: the user picks kinds in the popup.
+  // Filtering at display time means toggles apply instantly from cache.
+  const visibleNotes = useMemo(
+    () => notes.filter((note) => !hiddenKinds.includes(note.kind)),
+    [notes, hiddenKinds],
+  );
 
   const notesRef = useRef<Note[]>([]);
   notesRef.current = notes;
@@ -95,7 +103,7 @@ export function Overlay({ pr }: Props) {
 
   /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {
-    if (notes.length === 0) {
+    if (visibleNotes.length === 0) {
       clearBadges();
       setPlaced(0);
       return;
@@ -109,13 +117,13 @@ export function Overlay({ pr }: Props) {
 
       // Redo the pass only when the rendered diff actually changed. GitHub
       // renders large diffs progressively, so rows keep arriving.
-      const signature = `${dom.name}:${document.querySelectorAll('[data-line-number]').length}`;
+      const signature = `${dom.name}:${document.querySelectorAll('[data-line-number]').length}:${hiddenKinds.join(',')}`;
       if (signature === lastSignature) return;
       lastSignature = signature;
 
-      setPlaced(syncBadges(notes, dom, ({ note, element }) => select(note, element)));
+      setPlaced(syncBadges(visibleNotes, dom, ({ note, element }) => select(note, element)));
     });
-  }, [notes, select]);
+  }, [visibleNotes, hiddenKinds, select]);
 
   const run = useCallback(
     async (nextMode: Mode, refresh: boolean) => {
@@ -142,6 +150,17 @@ export function Overlay({ pr }: Props) {
   );
 
   useEffect(() => {
+    const onStorage = (changes: Record<string, chrome.storage.StorageChange>) => {
+      const next = changes['lowdiff:settings']?.newValue as
+        | { hiddenKinds?: NoteKind[] }
+        | undefined;
+      if (next) setHiddenKinds(next.hiddenKinds ?? []);
+    };
+    chrome.storage.onChanged.addListener(onStorage);
+    return () => chrome.storage.onChanged.removeListener(onStorage);
+  }, []);
+
+  useEffect(() => {
     void chrome.runtime
       .sendMessage({ type: 'LIST_REPOS' })
       .then((reply: { ok: boolean; repos?: string[] }) => {
@@ -155,6 +174,7 @@ export function Overlay({ pr }: Props) {
 
       const startMode = reply.ok ? reply.settings.defaultMode : 'review';
       setMode(startMode);
+      if (reply.ok) setHiddenKinds(reply.settings.hiddenKinds);
 
       if (reply.ok && !reply.settings.configured) {
         setBusy(false);
@@ -218,13 +238,14 @@ export function Overlay({ pr }: Props) {
     });
   };
 
-  const notesLost = notes.length - placed;
+  const notesLost = visibleNotes.length - placed;
+  const notesHidden = notes.length - visibleNotes.length;
 
   return (
     <div class="root" ref={rootRef}>
       <SummaryCard
         summary={error ?? summary}
-        notes={notes}
+        notes={visibleNotes}
         mode={mode}
         cached={cached}
         busy={busy}
@@ -236,6 +257,18 @@ export function Overlay({ pr }: Props) {
         }}
         onRefresh={() => void run(mode, true)}
       />
+
+      {notesHidden > 0 && !busy && (
+        <div
+          style={{
+            font: `11px/1.5 'DM Sans',sans-serif`, color: C.faint,
+            margin: '-8px 0 14px', paddingLeft: '2px',
+          }}
+        >
+          {notesHidden} note{notesHidden === 1 ? '' : 's'} hidden by your annotation
+          filter (toolbar icon to change).
+        </div>
+      )}
 
       {notesLost > 0 && !busy && (
         <div
