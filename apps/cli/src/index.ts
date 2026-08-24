@@ -5,6 +5,7 @@
  * the fastest way to check whether the notes are any good.
  *
  *   lowdiff <pr-url> [--mode review|explain] [--provider anthropic|openai|google]
+ *   lowdiff <pr-url> --chat "why 300ms?"
  */
 import { readFileSync } from 'node:fs';
 import { anchorNotes } from '@lowdiff/core';
@@ -129,6 +130,26 @@ async function main(): Promise<void> {
     `${DIM}${grounded.length} notes${dropped ? `, ${dropped} dropped as ungrounded` : ''} · ` +
       `${result.usage.inputTokens} in / ${result.usage.outputTokens} out${cost} · ${elapsed}s${OFF}`,
   );
+
+  // Exercises the same chat path the extension uses, with the review it just
+  // produced as context — the extension passes its cached review the same way.
+  const question = flag('chat');
+  if (!question) return;
+
+  console.log(`\n${BOLD}> ${question}${OFF}\n`);
+  for await (const delta of llm.chat({
+    pr: { ...location, headSha: meta.headSha },
+    title: meta.title,
+    body: meta.body,
+    files: withDiff,
+    summary: result.summary,
+    notes: grounded,
+    history: [],
+    question,
+  })) {
+    if (delta.type === 'text') process.stdout.write(delta.text);
+  }
+  console.log('\n');
 }
 
 main().catch((error: unknown) => {
