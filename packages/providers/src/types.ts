@@ -1,4 +1,4 @@
-import type { FileDiff, Mode, PrRef } from '@lowdiff/core';
+import type { FileDiff, Mode, Note, PrRef } from '@lowdiff/core';
 
 export type ProviderId = 'anthropic' | 'openai' | 'google';
 
@@ -44,7 +44,13 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   pr: PrRef;
+  title: string;
+  body: string;
   files: FileDiff[];
+  /** The review summary already shown to the user, so chat can build on it. */
+  summary: string;
+  /** The grounded notes, so "Ask about this" refers to something the model sees. */
+  notes: Note[];
   history: ChatMessage[];
   question: string;
   signal?: AbortSignal;

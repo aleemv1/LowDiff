@@ -50,7 +50,7 @@ async function handle(
     case 'ANNOTATE':
       return annotate(message.pr, message.mode, message.refresh ?? false);
     case 'CHAT':
-      await chat(message.pr, message.question, message.history, message.port);
+      await chat(message.pr, message.question, message.history, message.port, message.mode);
       return { ok: true };
     case 'OPEN_OPTIONS':
       await chrome.runtime.openOptionsPage();
@@ -127,11 +127,16 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
   };
 }
 
+function otherMode(mode: Mode): Mode {
+  return mode === 'review' ? 'explain' : 'review';
+}
+
 async function chat(
   pr: PrLocation,
   question: string,
   history: ChatTurn[],
   portName: string,
+  mode: Mode,
 ): Promise<void> {
   const settings = await loadSettings();
   const key = settings.keys[settings.provider];
@@ -142,6 +147,13 @@ async function chat(
   );
   const meta = await github.getPr(pr);
   const files = await github.getDiff({ ...pr, headSha: meta.headSha });
+
+  // Hand chat the review the user is looking at. Without it, "Ask about this"
+  // asks about a finding the model cannot see, and it re-derives an answer
+  // that may not match the note on screen.
+  const review =
+    (await readCache(pr.owner, pr.repo, pr.number, meta.headSha, mode)) ??
+    (await readCache(pr.owner, pr.repo, pr.number, meta.headSha, otherMode(mode)));
 
   const llm = createLlmClient({
     provider: settings.provider,
@@ -155,7 +167,11 @@ async function chat(
   try {
     for await (const delta of llm.chat({
       pr: { ...pr, headSha: meta.headSha },
+      title: meta.title,
+      body: meta.body,
       files,
+      summary: review?.summary ?? '',
+      notes: review?.notes ?? [],
       history,
       question,
     })) {

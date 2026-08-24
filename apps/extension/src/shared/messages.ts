@@ -33,7 +33,14 @@ export interface PrLocation {
 export type Request =
   | { type: 'GET_PUBLIC_SETTINGS' }
   | { type: 'ANNOTATE'; pr: PrLocation; mode: Mode; refresh?: boolean }
-  | { type: 'CHAT'; pr: PrLocation; question: string; history: ChatTurn[]; port: string }
+  | {
+      type: 'CHAT';
+      pr: PrLocation;
+      question: string;
+      history: ChatTurn[];
+      port: string;
+      mode: Mode;
+    }
   | { type: 'OPEN_OPTIONS' };
 
 export interface ChatTurn {

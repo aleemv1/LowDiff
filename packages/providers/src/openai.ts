@@ -71,7 +71,7 @@ export class OpenAIClient implements LlmClient {
         model: this.model,
         stream: true,
         messages: [
-          { role: 'system', content: chatSystemPrompt() },
+          { role: 'system', content: chatSystemPrompt(req) },
           ...req.history.map((m) => ({ role: m.role, content: m.content })),
           { role: 'user' as const, content: chatUserPrompt(req) },
         ],

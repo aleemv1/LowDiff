@@ -64,7 +64,7 @@ export class GoogleClient implements LlmClient {
       model: this.model,
       contents: [...history, { role: 'user', parts: [{ text: chatUserPrompt(req) }] }],
       config: {
-        systemInstruction: chatSystemPrompt(),
+        systemInstruction: chatSystemPrompt(req),
         ...(req.signal ? { abortSignal: req.signal } : {}),
       },
     });

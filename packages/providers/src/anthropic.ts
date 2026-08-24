@@ -82,7 +82,7 @@ export class AnthropicClient implements LlmClient {
         model: this.model,
         max_tokens: 4096,
         system: [
-          { type: 'text', text: chatSystemPrompt(), cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: chatSystemPrompt(req), cache_control: { type: 'ephemeral' } },
         ],
         messages: [
           ...req.history.map((m) => ({ role: m.role, content: m.content })),

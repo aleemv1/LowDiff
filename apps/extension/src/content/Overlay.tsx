@@ -177,6 +177,7 @@ export function Overlay({ pr }: Props) {
       question,
       history: messages,
       port: portName,
+      mode,
     });
   };
 
@@ -237,7 +238,7 @@ export function Overlay({ pr }: Props) {
           messages={messages}
           typing={typing}
           input={input}
-          contextChips={[`PR #${pr.number}`, `${notes.length} notes`]}
+          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`]}
           onInput={setInput}
           onSend={() => send(input)}
           onClose={() => setChatOpen(false)}
