@@ -1,0 +1,99 @@
+<!doctype html>
+<!--
+  Stands in for GitHub's client-rendered /changes view, in dark mode.
+
+  That view is rolled out per account and redirects to the classic one when
+  logged out, so it cannot be reached from a test browser. This reproduces the
+  attributes the modern adapter reads, and the Primer variables the overlay
+  themes from, so both can be exercised end to end.
+-->
+<html lang="en" data-color-mode="dark" data-dark-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>Create python-package-conda.yml by tester · Pull Request #1</title>
+    <style>
+      :root {
+        --bgColor-default: #0d1117;
+        --bgColor-muted: #151b23;
+        --fgColor-default: #f0f6fc;
+        --fgColor-muted: #9198a1;
+        --fgColor-accent: #4493f8;
+        --fgColor-danger: #f85149;
+        --fgColor-attention: #d29922;
+        --fgColor-success: #3fb950;
+        --borderColor-default: #3d444d;
+        --bgColor-accent-muted: rgba(56, 139, 253, 0.15);
+        --bgColor-danger-muted: rgba(248, 81, 73, 0.15);
+        --bgColor-attention-muted: rgba(187, 128, 9, 0.15);
+        --bgColor-success-muted: rgba(46, 160, 67, 0.15);
+        --diffBlob-additionNum-bgColor: rgba(63, 185, 80, 0.3);
+        --diffBlob-deletionNum-bgColor: rgba(248, 81, 73, 0.3);
+        --color-prettylights-syntax-keyword: #ff7b72;
+        --color-prettylights-syntax-string: #a5d6ff;
+        --color-prettylights-syntax-constant: #79c0ff;
+        --color-prettylights-syntax-entity: #d2a8ff;
+        --color-prettylights-syntax-entity-tag: #7ee787;
+      }
+      body {
+        margin: 0; background: var(--bgColor-default); color: var(--fgColor-default);
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+      table { border-collapse: collapse; width: 100%;
+              font: 12px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      td { padding: 0 8px; white-space: pre; }
+      td[data-first-unified-line-number-cell] {
+        width: 44px; text-align: right; color: var(--fgColor-muted);
+        background: var(--diffBlob-additionNum-bgColor); user-select: none;
+      }
+      td[data-line-anchor] { background: rgba(63, 185, 80, 0.12); }
+      .file { border: 1px solid var(--borderColor-default); border-radius: 6px;
+              overflow: hidden; margin-top: 12px; }
+      .file-header { padding: 8px 12px; background: var(--bgColor-muted);
+                     border-bottom: 1px solid var(--borderColor-default);
+                     font: 12px ui-monospace, Menlo, monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Create python-package-conda.yml <span>#1</span></h1>
+      <div id="diff-comparison-viewer-container">
+        <div id="diff-aaa" role="region" data-estimated-height="600">
+          <div class="file">
+            <div class="file-header">.github/workflows/python-package-conda.yml</div>
+            <table role="grid"
+                   aria-label="Diff for: .github/workflows/python-package-conda.yml"
+                   data-diff-anchor="diff-aaa">
+              <tbody>
+                <tr>
+                  <td role="gridcell" data-diff-side="right" data-line-number="1"
+                      data-first-unified-line-number-cell="false">1</td>
+                  <td role="gridcell" data-diff-side="right" data-line-number="1"
+                      data-line-anchor="diff-aaaR1">+10000000$usdc</td>
+                </tr>
+                <tr>
+                  <td role="gridcell" data-diff-side="right" data-line-number="2"
+                      data-first-unified-line-number-cell="false">2</td>
+                  <td role="gridcell" data-diff-side="right" data-line-number="2"
+                      data-line-anchor="diff-aaaR2">+name: Python Package using Conda</td>
+                </tr>
+                <tr>
+                  <td role="gridcell" data-diff-side="right" data-line-number="3"
+                      data-first-unified-line-number-cell="false">3</td>
+                  <td role="gridcell" data-diff-side="right" data-line-number="3"
+                      data-line-anchor="diff-aaaR3">+on: [push]</td>
+                </tr>
+                <tr>
+                  <td role="gridcell" data-diff-side="right" data-line-number="4"
+                      data-first-unified-line-number-cell="false">4</td>
+                  <td role="gridcell" data-diff-side="right" data-line-number="4"
+                      data-line-anchor="diff-aaaR4">+    run: conda env update --file environment.yml</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

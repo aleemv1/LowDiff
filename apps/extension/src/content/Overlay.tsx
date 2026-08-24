@@ -58,22 +58,27 @@ export function Overlay({ pr }: Props) {
 
     setActiveBadge(element);
     const dom = detectDiffDom();
-    if (dom) highlightNote(note, dom);
+    const lit = dom ? highlightNote(note, dom) : null;
+
+    // Anchor to the highlighted range rather than the badge. Opening against
+    // the badge put the popover on top of the very lines it had just
+    // highlighted, which defeats the point of highlighting them.
+    const anchorRect = lit ?? rect;
     // Flip above the badge when there is not room below, so the popover is not
     // cut off by the bottom of the viewport. The height is an estimate — note
     // bodies are capped, so this is bounded — and it only picks a side.
     const estimatedHeight = note.code ? 320 : 200;
-    const openUpward = rect.bottom + estimatedHeight > window.innerHeight;
+    const openUpward = anchorRect.bottom + estimatedHeight > window.innerHeight;
 
     setOpen({
       note,
       top: openUpward
-        ? rect.top - base.top - estimatedHeight - 8
-        : rect.bottom - base.top + 8,
-      // Right-align the 440px popover to the badge, clamped to the page width.
+        ? anchorRect.top - base.top - estimatedHeight - 8
+        : anchorRect.bottom - base.top + 8,
+      // Aligned to the badge's column, clamped to the page width.
       left: Math.max(
         12 - base.left,
-        Math.min(rect.right - base.left - POPOVER_WIDTH, window.innerWidth - base.left - 452),
+        Math.min(rect.left - base.left, window.innerWidth - base.left - POPOVER_WIDTH - 12),
       ),
     });
   }, []);

@@ -83,14 +83,19 @@ const HIGHLIGHT_ATTR = 'data-lowdiff-highlit';
  * the model reported one, so the reader sees the construct rather than one
  * line pulled out of it.
  */
-export function highlightNote(note: Note | null, dom: DiffDom): void {
+export function highlightNote(note: Note | null, dom: DiffDom): DOMRect | null {
   for (const el of document.querySelectorAll<HTMLElement>(`[${HIGHLIGHT_ATTR}]`)) {
     el.style.boxShadow = el.getAttribute(HIGHLIGHT_ATTR) ?? '';
     el.removeAttribute(HIGHLIGHT_ATTR);
   }
-  if (!note) return;
+  if (!note) return null;
 
   const last = note.anchor.endLine ?? note.anchor.line;
+  let top = Infinity;
+  let bottom = -Infinity;
+  let left = Infinity;
+  let right = -Infinity;
+
   for (const line of dom.lines(note.anchor.path)) {
     if (line.side !== note.anchor.side) continue;
     if (line.line < note.anchor.line || line.line > last) continue;
@@ -98,7 +103,16 @@ export function highlightNote(note: Note | null, dom: DiffDom): void {
     // Stash whatever was there so the row is restored exactly on close.
     line.row.setAttribute(HIGHLIGHT_ATTR, line.row.style.boxShadow);
     line.row.style.boxShadow = `inset 3px 0 0 0 ${ACCENT}, inset 0 0 0 999px ${HIGHLIGHT_WASH}`;
+
+    const rect = line.row.getBoundingClientRect();
+    top = Math.min(top, rect.top);
+    bottom = Math.max(bottom, rect.bottom);
+    left = Math.min(left, rect.left);
+    right = Math.max(right, rect.right);
   }
+
+  if (bottom === -Infinity) return null;
+  return new DOMRect(left, top, right - left, bottom - top);
 }
 
 export function clearBadges(): void {
