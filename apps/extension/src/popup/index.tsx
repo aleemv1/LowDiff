@@ -20,12 +20,12 @@ const PROVIDERS: { id: ProviderId; label: string; models: string[] }[] = [
 ];
 
 const KINDS: { kind: NoteKind; label: string; color: string }[] = [
-  { kind: 'SECURITY', label: '🔒 Security', color: '#c4362a' },
-  { kind: 'RISK', label: '⚠ Risk', color: '#c4362a' },
-  { kind: 'BREAKING', label: '⚡ Breaking', color: '#9a6700' },
-  { kind: 'PERF', label: 'Perf', color: '#0969da' },
-  { kind: 'SUGGESTION', label: 'Suggestion', color: '#1a7f37' },
-  { kind: 'EXPLAIN', label: 'Explain', color: '#59636e' },
+  { kind: 'SECURITY', label: 'Security', color: '#e5534b' },
+  { kind: 'RISK', label: 'Risk', color: '#e5534b' },
+  { kind: 'BREAKING', label: 'Breaking', color: '#d29922' },
+  { kind: 'PERF', label: 'Performance', color: '#4493f8' },
+  { kind: 'SUGGESTION', label: 'Suggestions', color: '#3fb950' },
+  { kind: 'EXPLAIN', label: 'Explanations', color: '#9198a1' },
 ];
 
 const T = {
@@ -137,7 +137,12 @@ function Popup() {
       </select>
 
       <label style={label}>ANNOTATIONS</label>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+      {/*
+        Quiet list, not pills: colour is confined to a small dot per kind, and
+        state reads from the dot alone — filled means shown, hollow means
+        hidden. No borders, no strikethrough, nothing shouting.
+      */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 10px' }}>
         {KINDS.map(({ kind, label: text, color }) => {
           const hidden = (settings.hiddenKinds ?? []).includes(kind);
           return (
@@ -151,25 +156,37 @@ function Popup() {
                 });
               }}
               style={{
-                padding: '4px 10px',
-                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 8px',
+                border: 'none',
+                borderRadius: '6px',
+                background: 'transparent',
                 cursor: 'pointer',
-                font: '600 10.5px inherit',
-                border: `1px solid ${hidden ? T.line : color}`,
-                background: hidden ? 'transparent' : T.tint,
-                color: hidden ? T.muted : color,
-                opacity: hidden ? 0.6 : 1,
-                textDecoration: hidden ? 'line-through' : 'none',
+                font: '500 12px inherit',
+                color: hidden ? T.muted : T.ink,
+                opacity: hidden ? 0.55 : 1,
+                textAlign: 'left' as const,
               }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = T.tint)}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
             >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  flex: 'none',
+                  background: hidden ? 'transparent' : color,
+                  border: `1.5px solid ${hidden ? T.muted : color}`,
+                }}
+              />
               {text}
             </button>
           );
         })}
       </div>
-      <p style={{ margin: '6px 0 0', font: '10px/1.5 inherit', color: T.muted }}>
-        Hiding a kind filters the overlay instantly — nothing is re-run.
-      </p>
 
       <label style={label}>MODE</label>
       <div style={{ display: 'flex', gap: '6px' }}>
