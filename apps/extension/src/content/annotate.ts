@@ -125,9 +125,12 @@ export function setActiveBadge(active: HTMLElement | null): void {
     const kind = el.getAttribute('data-lowdiff-kind') ?? 'EXPLAIN';
     const style = KIND_STYLE[kind] ?? KIND_STYLE['EXPLAIN']!;
     const on = el === active;
-    el.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
-    el.style.color = on ? '#fff' : style.color;
-    el.style.transform = on ? 'translateY(-50%) scale(1.2)' : 'translateY(-50%)';
+    // The outer element is only the hit area; paint the inner dot.
+    const visual = el.firstElementChild;
+    if (!(visual instanceof HTMLElement)) continue;
+    visual.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
+    visual.style.color = on ? '#fff' : style.color;
+    visual.style.transform = on ? 'scale(1.2)' : 'none';
   }
 }
 
@@ -139,12 +142,14 @@ function createBadge(note: Note): HTMLElement {
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.title = `${note.kind}: ${note.title}`;
-  badge.textContent = '✦';
+  // Two elements: an invisible ~26px hit area and the 15px visual dot inside
+  // it. A 15px target alone is genuinely hard to click; growing the dot would
+  // shout, so padding does the work instead.
   Object.assign(badge.style, {
     position: 'absolute',
     // Straddles the gutter's right edge so it never covers the line number,
     // however many digits that number has.
-    right: '-8px',
+    right: '-13px',
     // Centred on the FIRST text line, not the cell: when a long line
     // soft-wraps, the cell grows but the line number stays top-aligned, and a
     // 50% badge floats between the wrapped rows. 1lh tracks the line height.
@@ -153,15 +158,9 @@ function createBadge(note: Note): HTMLElement {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '15px',
-    height: '15px',
+    width: '26px',
+    height: '26px',
     zIndex: '3',
-    borderRadius: '50%',
-    border: `1.5px solid ${ACCENT}`,
-    background: 'var(--bgColor-default, #fff)',
-    color: style.color,
-    font: '700 10px -apple-system, BlinkMacSystemFont, sans-serif',
-    lineHeight: '1',
     cursor: 'pointer',
     userSelect: 'none',
     flex: 'none',
@@ -169,5 +168,23 @@ function createBadge(note: Note): HTMLElement {
   } satisfies Partial<CSSStyleDeclaration>);
   // Overrides the 10px fallback where the lh unit is supported (Chrome 109+).
   badge.style.top = '0.5lh';
+
+  const visual = document.createElement('span');
+  visual.textContent = '✦';
+  Object.assign(visual.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '15px',
+    height: '15px',
+    borderRadius: '50%',
+    border: `1.5px solid ${ACCENT}`,
+    background: 'var(--bgColor-default, #fff)',
+    color: style.color,
+    font: '700 10px -apple-system, BlinkMacSystemFont, sans-serif',
+    lineHeight: '1',
+    pointerEvents: 'none',
+  } satisfies Partial<CSSStyleDeclaration>);
+  badge.append(visual);
   return badge;
 }

@@ -30,7 +30,11 @@ Writing rules:
   that resolves the finding over a rewrite — if one token, flag, or line fixes
   it, show exactly that. Omit it otherwise.
 - confidence: "high" only when the diff alone proves it. Use "medium" when the
-  conclusion depends on code you were not shown.`;
+  conclusion depends on code you were not shown.
+- When you claim behaviour changed for a specific example ("X matched before,
+  now it does not"), check that example against BOTH the old and new code
+  before including it. One wrong example discredits an otherwise correct
+  finding — use only the examples you have verified, even if that means fewer.`;
 
 const REVIEW = `${COMMON}
 

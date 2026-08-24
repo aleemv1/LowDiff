@@ -85,7 +85,7 @@ if (!worker) {
 await worker.evaluate(async (apiKey) => {
   await chrome.storage.local.set({
     'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey }, defaultMode: 'review' },
-    'lowdiff:review:v4:acme/demo#1@fixture:review': {
+    'lowdiff:review:v5:acme/demo#1@fixture:review': {
       summary: 'The file is prefixed with a crypto wallet address inside `python-package-conda.yml`, making the YAML invalid.',
       headSha: 'fixture',
       usage: { inputTokens: 0, outputTokens: 0 },
