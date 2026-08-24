@@ -19,14 +19,38 @@ const PROVIDERS: { id: ProviderId; label: string; models: string[] }[] = [
   { id: 'google', label: 'Google', models: ['gemini-3.7-flash', 'gemini-3.7-pro'] },
 ];
 
-const KINDS: { kind: NoteKind; label: string; color: string }[] = [
-  { kind: 'SECURITY', label: 'Security', color: '#e5534b' },
-  { kind: 'RISK', label: 'Risk', color: '#e5534b' },
-  { kind: 'BREAKING', label: 'Breaking', color: '#d29922' },
-  { kind: 'PERF', label: 'Performance', color: '#4493f8' },
-  { kind: 'SUGGESTION', label: 'Suggestions', color: '#3fb950' },
-  { kind: 'EXPLAIN', label: 'Explanations', color: '#9198a1' },
+/**
+ * One question — how much do you want to hear? — instead of six switches.
+ * Each level is exactly the kinds it hides, so it stays a display filter.
+ */
+const LEVELS: { id: string; title: string; detail: string; hides: NoteKind[] }[] = [
+  {
+    id: 'problems',
+    title: 'Problems only',
+    detail: 'Security, risk, breaking',
+    hides: ['PERF', 'SUGGESTION', 'EXPLAIN'],
+  },
+  {
+    id: 'perf',
+    title: 'Problems + performance',
+    detail: 'Adds performance notes',
+    hides: ['SUGGESTION', 'EXPLAIN'],
+  },
+  {
+    id: 'all',
+    title: 'Everything',
+    detail: 'Adds suggestions and explanations',
+    hides: [],
+  },
 ];
+
+function levelOf(hidden: NoteKind[]): string {
+  const set = new Set(hidden);
+  for (const level of LEVELS) {
+    if (level.hides.length === set.size && level.hides.every((k) => set.has(k))) return level.id;
+  }
+  return 'custom'; // a hand-edited hiddenKinds from an older build
+}
 
 const T = {
   ink: 'var(--ld-ink, #1f2328)',
@@ -136,53 +160,43 @@ function Popup() {
         ))}
       </select>
 
-      <label style={label}>ANNOTATIONS</label>
-      {/*
-        Quiet list, not pills: colour is confined to a small dot per kind, and
-        state reads from the dot alone — filled means shown, hollow means
-        hidden. No borders, no strikethrough, nothing shouting.
-      */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 10px' }}>
-        {KINDS.map(({ kind, label: text, color }) => {
-          const hidden = (settings.hiddenKinds ?? []).includes(kind);
+      <label style={label}>SHOW</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {LEVELS.map((level) => {
+          const active = levelOf(settings.hiddenKinds ?? []) === level.id;
           return (
             <button
-              key={kind}
-              title={hidden ? 'Hidden — click to show' : 'Shown — click to hide'}
-              onClick={() => {
-                const current = settings.hiddenKinds ?? [];
-                update({
-                  hiddenKinds: hidden ? current.filter((k) => k !== kind) : [...current, kind],
-                });
-              }}
+              key={level.id}
+              onClick={() => update({ hiddenKinds: level.hides })}
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '6px 8px',
+                alignItems: 'flex-start',
+                gap: '9px',
+                padding: '7px 9px',
                 border: 'none',
-                borderRadius: '6px',
-                background: 'transparent',
+                borderRadius: '8px',
+                background: active ? T.tint : 'transparent',
                 cursor: 'pointer',
-                font: '500 12px inherit',
-                color: hidden ? T.muted : T.ink,
-                opacity: hidden ? 0.55 : 1,
                 textAlign: 'left' as const,
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = T.tint)}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
             >
               <span
                 style={{
-                  width: '8px',
-                  height: '8px',
+                  width: '13px',
+                  height: '13px',
                   borderRadius: '50%',
+                  border: `1.5px solid ${active ? T.accent : T.line}`,
+                  boxShadow: active ? `inset 0 0 0 3.5px ${T.accent}` : 'none',
+                  marginTop: '1px',
                   flex: 'none',
-                  background: hidden ? 'transparent' : color,
-                  border: `1.5px solid ${hidden ? T.muted : color}`,
                 }}
               />
-              {text}
+              <span>
+                <b style={{ display: 'block', font: '600 12px inherit', color: T.ink }}>
+                  {level.title}
+                </b>
+                <span style={{ font: '10.5px/1.45 inherit', color: T.muted }}>{level.detail}</span>
+              </span>
             </button>
           );
         })}

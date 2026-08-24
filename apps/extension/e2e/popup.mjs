@@ -37,8 +37,7 @@ await page.setViewportSize({ width: 320, height: 560 });
 await page.waitForTimeout(400);
 
 // Hide two kinds, switch provider, pick a model; read back what persisted.
-await page.click('button:has-text("Explain")>>nth=0').catch(() => {});
-await page.click('button:has-text("Suggestion")');
+await page.click('button:has-text("Problems only")');
 await page.click('button:has-text("Google")');
 await page.waitForTimeout(200);
 await page.selectOption('select', 'gemini-3.7-pro');
