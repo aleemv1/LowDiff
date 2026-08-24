@@ -6,8 +6,15 @@ export interface DomLine {
   line: number;
   /** The row element a badge is anchored into. */
   row: HTMLElement;
-  /** The cell holding the code text, where the badge is appended. */
+  /** The cell holding the code text. */
   codeCell: HTMLElement;
+  /**
+   * The line-number cell. Badges go here rather than in the code, which keeps
+   * them in one column beside the numbers and out of the code's layout — every
+   * generation of GitHub's markup breaks differently when you inject into the
+   * code cell.
+   */
+  gutterCell: HTMLElement;
 }
 
 /**

@@ -57,11 +57,17 @@ export const modernDom: DiffDom = {
         cell.getAttribute('data-diff-side')?.toLowerCase() === 'left' ? 'LEFT' : 'RIGHT';
 
       const row = cell.closest('tr');
+      // The gutter is the other cell for this line — the one without an anchor.
+      const gutter = row?.querySelector<HTMLElement>(
+        `[data-line-number="${line}"][data-diff-side="${cell.getAttribute('data-diff-side') ?? ''}"]:not([data-line-anchor])`,
+      );
+
       out.push({
         side,
         line,
         row: row instanceof HTMLElement ? row : cell,
         codeCell: cell,
+        gutterCell: gutter ?? cell,
       });
     }
     return out;

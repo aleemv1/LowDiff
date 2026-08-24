@@ -159,6 +159,23 @@ describe('modernDom', () => {
     expect(sides).toEqual(['RIGHT', 'RIGHT', 'LEFT']);
   });
 
+  it('resolves the gutter cell separately from the code cell', () => {
+    const line = modernDom.lines(PATH).find((l) => l.line === 2)!;
+    expect(line.gutterCell.hasAttribute('data-line-anchor')).toBe(false);
+    expect(line.codeCell.hasAttribute('data-line-anchor')).toBe(true);
+  });
+
+  it('puts the badge in the gutter cell', () => {
+    syncBadges(
+      [note({ anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
+      modernDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    expect(badge.parentElement!.hasAttribute('data-line-anchor')).toBe(false);
+    expect(badge.parentElement!.getAttribute('data-line-number')).toBe('2');
+  });
+
   it('places a badge on the right-side line', () => {
     const placed = syncBadges(
       [note({ anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
@@ -190,45 +207,54 @@ describe('modernDom', () => {
 });
 
 /**
- * GitHub styles `.blob-code-inner` as display:table-cell. A badge placed after
- * it becomes a sibling table cell and renders on its own line, so it has to go
- * inside that span.
+ * Badges live in the line-number gutter, not the code. Injecting into the code
+ * cell broke differently in each generation of GitHub's markup — a sibling
+ * table cell in the classic view, a forced line break in the newer one.
  */
-describe('badge insertion point', () => {
-  beforeEach(() => {
-    document.documentElement.innerHTML = `
-      <div class="js-diff-progressive-container">
-        <div class="file" data-tagsearch-path="a.ts">
-          <table class="diff-table"><tbody>
-            <tr>
-              <td class="blob-num" data-line-number="1"></td>
-              <td class="blob-num" data-line-number="1"></td>
-              <td class="blob-code">
-                <span class="blob-code-inner"><span class="pl-s">+const a = 1;</span></span>
-              </td>
-            </tr>
-          </tbody></table>
-        </div>
-      </div>`;
+describe('badge placement in the gutter', () => {
+  it('classic: the gutter cell is the line-number cell', () => {
+    document.documentElement.innerHTML = FIXTURE;
+    const line = classicDom.lines(PATH).find((l) => l.side === 'RIGHT' && l.line === 5)!;
+    expect(line.gutterCell.className).toContain('blob-num');
+    expect(line.gutterCell.getAttribute('data-line-number')).toBe('5');
+  });
+
+  it('classic: the badge lands in the gutter, not the code', () => {
+    document.documentElement.innerHTML = FIXTURE;
     clearBadges();
-  });
-
-  it('targets the inner code span, not the cell', () => {
-    expect(classicDom.lines('a.ts')[0]!.codeCell.className).toContain('blob-code-inner');
-  });
-
-  it('puts the badge inside that span', () => {
     syncBadges(
-      [note({ anchor: { path: 'a.ts', side: 'RIGHT', line: 1, lineHash: 'x' } })],
+      [note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })],
       classicDom,
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    expect(badge.parentElement!.className).toContain('blob-code-inner');
+    expect(badge.parentElement!.className).toContain('blob-num');
+    expect(badge.parentElement!.className).not.toContain('blob-code');
   });
 
-  it('falls back to the cell when there is no inner span', () => {
-    document.querySelector('.blob-code-inner')!.replaceWith('+const a = 1;');
-    expect(classicDom.lines('a.ts')[0]!.codeCell.className).toContain('blob-code');
+  it('classic: the code text is left untouched', () => {
+    document.documentElement.innerHTML = FIXTURE;
+    clearBadges();
+    const before = classicDom.lines(PATH).find((l) => l.line === 5)!.codeCell.textContent;
+    syncBadges(
+      [note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const after = classicDom.lines(PATH).find((l) => l.line === 5)!.codeCell.textContent;
+    expect(after).toBe(before);
+  });
+
+  it('positions the badge without disturbing layout', () => {
+    document.documentElement.innerHTML = FIXTURE;
+    clearBadges();
+    syncBadges(
+      [note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]') as HTMLElement;
+    expect(badge.style.position).toBe('absolute');
+    expect((badge.parentElement as HTMLElement).style.position).toBe('relative');
   });
 });

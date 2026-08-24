@@ -40,10 +40,10 @@ export const classicDom: DiffDom = {
       nums.forEach((cell, i) => {
         const raw = cell.getAttribute('data-line-number');
         const side = sides[i];
-        if (!raw || !side) return;
+        if (!raw || !side || !(cell instanceof HTMLElement)) return;
         const line = Number(raw);
         if (!Number.isInteger(line)) return;
-        out.push({ side, line, row: row as HTMLElement, codeCell });
+        out.push({ side, line, row: row as HTMLElement, codeCell, gutterCell: cell });
       });
     }
     return out;

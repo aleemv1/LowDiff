@@ -56,9 +56,17 @@ export function syncBadges(
         onSelect({ note, element: badge });
       });
 
-      // Prepended: the badge reads as a gutter marker beside the line number
-      // rather than trailing whatever length the code happens to be.
-      target.codeCell.prepend(badge);
+      // Absolutely positioned inside the line-number cell, so it sits beside
+      // the number without entering any layout GitHub owns. Injecting into the
+      // code cell pushed the code onto its own line in the newer view.
+      const gutter = target.gutterCell;
+      // Treat an empty computed value as unpositioned too: if we skip this,
+      // the badge resolves against some distant ancestor and lands nowhere
+      // near its line.
+      const position = getComputedStyle(gutter).position;
+      if (!position || position === 'static') gutter.style.position = 'relative';
+      gutter.style.overflow = 'visible';
+      gutter.append(badge);
       placed++;
     }
   }
@@ -105,7 +113,7 @@ export function setActiveBadge(active: HTMLElement | null): void {
     const on = el === active;
     el.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
     el.style.color = on ? '#fff' : style.color;
-    el.style.transform = on ? 'scale(1.2)' : 'none';
+    el.style.transform = on ? 'translateY(-50%) scale(1.2)' : 'translateY(-50%)';
   }
 }
 
@@ -119,13 +127,18 @@ function createBadge(note: Note): HTMLElement {
   badge.title = `${note.kind}: ${note.title}`;
   badge.textContent = '✦';
   Object.assign(badge.style, {
+    position: 'absolute',
+    // Straddles the gutter's right edge so it never covers the line number,
+    // however many digits that number has.
+    right: '-8px',
+    top: '50%',
+    transform: 'translateY(-50%)',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    verticalAlign: 'middle',
-    marginRight: '8px',
-    width: '16px',
-    height: '16px',
+    width: '15px',
+    height: '15px',
+    zIndex: '3',
     borderRadius: '50%',
     border: `1.5px solid ${ACCENT}`,
     background: 'var(--bgColor-default, #fff)',
