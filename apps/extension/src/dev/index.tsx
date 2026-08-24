@@ -132,7 +132,7 @@ const memory = new Map<string, unknown>();
 };
 
 const style = document.createElement('style');
-style.textContent = STYLES.replace(':host', ':root');
+style.textContent = STYLES.replaceAll(':host', ':root');
 document.head.append(style);
 
 render(

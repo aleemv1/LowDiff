@@ -2,6 +2,7 @@ import { render } from 'preact';
 import { isPrDiffUrl, parsePrUrl } from '@lowdiff/context';
 import { Overlay } from './Overlay.js';
 import { clearBadges } from './annotate.js';
+import { watch } from './watch.js';
 import { STYLES } from './theme.js';
 
 const HOST_ID = 'lowdiff-root';
@@ -17,11 +18,14 @@ console.info(TAG, 'content script loaded', window.location.pathname);
  * backstop that exists on every generation.
  */
 const ANCHORS = [
+  // Client-rendered view: the diff area itself, so the card lands directly
+  // above the first file rather than over the PR header.
+  '#diff-comparison-viewer-container',
   '[data-testid="diff-view"]',
+  // Classic server-rendered view.
   '.js-diff-progressive-container',
   '#files',
   '.diff-view',
-  'main',
 ];
 
 function findAnchor(): Element | null {
@@ -40,11 +44,22 @@ function mount(): boolean {
   if (!location) return false;
 
   const anchor = findAnchor();
-  if (!anchor?.parentElement) return false;
+  if (!anchor) return false;
 
   const host = document.createElement('div');
   host.id = HOST_ID;
-  anchor.parentElement.insertBefore(host, anchor);
+  // Prepended *inside* the diff container rather than inserted before it: as a
+  // sibling it becomes a flex/grid item in GitHub's layout row and squeezes the
+  // page. These styles keep the host from affecting their layout either way.
+  // No `contain: layout` here: it would make the host a containing block for
+  // position:fixed descendants, pinning the chat panel and its button to this
+  // box instead of the viewport.
+  Object.assign(host.style, {
+    display: 'block',
+    width: '100%',
+    flex: 'none',
+  } satisfies Partial<CSSStyleDeclaration>);
+  anchor.prepend(host);
 
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
@@ -54,7 +69,7 @@ function mount(): boolean {
   const container = document.createElement('div');
   shadow.append(container);
 
-  console.info(TAG, 'mounted before', anchor.tagName, anchor.className || '(no class)');
+  console.info(TAG, 'mounted inside', anchor.tagName, anchor.id || anchor.className || '(anon)');
   render(<Overlay pr={location} />, container);
   return true;
 }
@@ -70,7 +85,7 @@ function unmount(): void {
  */
 let lastUrl = window.location.href;
 
-new MutationObserver(() => {
+watch(() => {
   if (window.location.href !== lastUrl) {
     lastUrl = window.location.href;
     unmount();
@@ -80,8 +95,4 @@ new MutationObserver(() => {
     return;
   }
   mount();
-}).observe(document.documentElement, { childList: true, subtree: true });
-
-mount();
-document.addEventListener('turbo:load', () => void mount());
-document.addEventListener('pjax:end', () => void mount());
+});

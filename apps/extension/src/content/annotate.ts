@@ -1,6 +1,10 @@
 import type { Note } from '@lowdiff/core';
 import type { DiffDom } from './dom/index.js';
-import { C, KIND_STYLE } from './theme.js';
+import { KIND_STYLE } from './theme.js';
+
+// Badges live in GitHub's page, not our shadow root, so they cannot read the
+// --ld-* variables defined on :host. They use Primer's variables directly.
+const ACCENT = 'var(--fgColor-accent, #5b5bd6)';
 
 const BADGE_ATTR = 'data-lowdiff-badge';
 
@@ -73,7 +77,7 @@ export function setActiveBadge(active: HTMLElement | null): void {
     const kind = el.getAttribute('data-lowdiff-kind') ?? 'EXPLAIN';
     const style = KIND_STYLE[kind] ?? KIND_STYLE['EXPLAIN']!;
     const on = el === active;
-    el.style.background = on ? C.accent : '#fff';
+    el.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
     el.style.color = on ? '#fff' : style.color;
     el.style.transform = on ? 'translateY(-50%) scale(1.15)' : 'translateY(-50%)';
   }
@@ -96,8 +100,8 @@ function createBadge(note: Note): HTMLElement {
     width: '17px',
     height: '17px',
     borderRadius: '50%',
-    border: `1.5px solid ${C.accent}`,
-    background: '#fff',
+    border: `1.5px solid ${ACCENT}`,
+    background: 'var(--bgColor-default, #fff)',
     color: style.color,
     display: 'flex',
     alignItems: 'center',

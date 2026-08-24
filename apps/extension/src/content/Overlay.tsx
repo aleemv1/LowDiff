@@ -7,6 +7,7 @@ import { NotePopover } from './components/NotePopover.js';
 import { ChatPanel } from './components/ChatPanel.js';
 import { clearBadges, setActiveBadge, syncBadges } from './annotate.js';
 import { detectDiffDom } from './dom/index.js';
+import { watch } from './watch.js';
 
 interface Props {
   pr: PrLocation;
@@ -72,24 +73,28 @@ export function Overlay({ pr }: Props) {
     setOpen(null);
   }, []);
 
-  /** Re-place badges whenever the notes change or GitHub re-renders rows. */
+  /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {
     if (notes.length === 0) {
       clearBadges();
       setPlaced(0);
       return;
     }
-    const place = () => {
+
+    let lastSignature = '';
+
+    return watch(() => {
       const dom = detectDiffDom();
       if (!dom) return;
-      setPlaced(syncBadges(notes, dom, ({ note, element }) => select(note, element)));
-    };
-    place();
 
-    // GitHub loads large diffs progressively, so rows appear after we first run.
-    const observer = new MutationObserver(() => place());
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+      // Redo the pass only when the rendered diff actually changed. GitHub
+      // renders large diffs progressively, so rows keep arriving.
+      const signature = `${dom.name}:${document.querySelectorAll('[data-line-number]').length}`;
+      if (signature === lastSignature) return;
+      lastSignature = signature;
+
+      setPlaced(syncBadges(notes, dom, ({ note, element }) => select(note, element)));
+    });
   }, [notes, select]);
 
   const run = useCallback(
