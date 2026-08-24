@@ -69,3 +69,15 @@ ${shown}${truncated ? `\n\n[diff truncated at ${MAX_DIFF_CHARS} characters — l
 export function chatUserPrompt(req: ChatRequest): string {
   return req.question;
 }
+
+/** Appended to the system prompt when repo search tools are available. */
+export function toolsPrompt(repoNames: string[]): string {
+  return `
+
+REPOSITORY SEARCH
+You can search these locally registered repositories: ${repoNames.join(', ')}.
+- search_code finds a fixed string; read_file shows a file slice.
+- Search before you speculate, but be frugal: each call costs the user money.
+  One well-aimed search beats three broad ones, and you have at most 6 calls.
+- Cite what you found as repo/path:line.`;
+}

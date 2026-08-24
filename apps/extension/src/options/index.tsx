@@ -137,6 +137,19 @@ function Options() {
           public repos work at 60 requests/hour instead of 5,000.
         </p>
 
+        <label style={label}>DAEMON TOKEN (OPTIONAL)</label>
+        <input
+          type="password"
+          value={settings.daemonToken ?? ''}
+          placeholder="Lets chat search your local repos"
+          onInput={(e) => update({ daemonToken: (e.target as HTMLInputElement).value || undefined })}
+          style={field}
+        />
+        <p style={{ font: `11.5px/1.55 'DM Sans',sans-serif`, color: C.faint, margin: '7px 0 0' }}>
+          Run <code>npm run daemon</code> in the LowDiff repo and paste the token it prints.
+          Without it, chat sees only the pull request.
+        </p>
+
         <label style={label}>DEFAULT MODE</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['review', 'explain'] as Mode[]).map((m) => (

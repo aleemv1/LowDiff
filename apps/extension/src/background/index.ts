@@ -1,9 +1,10 @@
 import { anchorNotes, reanchor } from '@lowdiff/core';
-import { GitHubContextProvider } from '@lowdiff/context';
+import { DaemonClient, GitHubContextProvider } from '@lowdiff/context';
 import { createLlmClient } from '@lowdiff/providers';
 import type {
   AnnotateReply,
   ChatTurn,
+  ReposReply,
   PrLocation,
   PublicSettingsReply,
   Request,
@@ -41,7 +42,7 @@ chrome.runtime.onMessage.addListener((message: Request, _sender, sendResponse) =
 
 async function handle(
   message: Request,
-): Promise<AnnotateReply | PublicSettingsReply | { ok: true }> {
+): Promise<AnnotateReply | PublicSettingsReply | ReposReply | { ok: true }> {
   switch (message.type) {
     case 'GET_PUBLIC_SETTINGS': {
       const settings = await loadSettings();
@@ -52,6 +53,20 @@ async function handle(
     case 'CHAT':
       await chat(message.pr, message.question, message.history, message.port, message.mode);
       return { ok: true };
+    case 'ADD_REPO': {
+      const settings = await loadSettings();
+      if (!settings.daemonToken) return { ok: false, error: 'Set the daemon token in options first.' };
+      const daemon = new DaemonClient({ token: settings.daemonToken });
+      const added = await daemon.addRepo(message.path);
+      const repos = (await daemon.health()) ?? [];
+      return { ok: true, repos: repos.length > 0 ? repos : [added] };
+    }
+    case 'LIST_REPOS': {
+      const settings = await loadSettings();
+      if (!settings.daemonToken) return { ok: true, repos: [] };
+      const repos = await new DaemonClient({ token: settings.daemonToken }).health();
+      return { ok: true, repos: repos ?? [] };
+    }
     case 'OPEN_OPTIONS':
       await chrome.runtime.openOptionsPage();
       return { ok: true };
@@ -164,6 +179,21 @@ async function chat(
   const port = pendingPorts.get(portName);
   if (!port) throw new Error('Chat connection closed before the answer started.');
 
+  // Repo search rides on the local daemon; a missing or dead daemon simply
+  // means chat runs diff-only, at no extra cost.
+  let tools;
+  if (settings.daemonToken) {
+    const daemon = new DaemonClient({ token: settings.daemonToken });
+    const repoNames = await daemon.health();
+    if (repoNames && repoNames.length > 0) {
+      tools = {
+        repoNames,
+        search: (query: string, repo?: string) => daemon.search(query, repo),
+        read: (repo: string, path: string, startLine?: number) => daemon.read(repo, path, startLine),
+      };
+    }
+  }
+
   try {
     for await (const delta of llm.chat({
       pr: { ...pr, headSha: meta.headSha },
@@ -174,6 +204,7 @@ async function chat(
       notes: review?.notes ?? [],
       history,
       question,
+      ...(tools ? { tools } : {}),
     })) {
       port.postMessage(delta);
     }

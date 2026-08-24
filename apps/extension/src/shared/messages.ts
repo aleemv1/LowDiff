@@ -5,6 +5,8 @@ export interface Settings {
   provider: ProviderId;
   model?: string | undefined;
   githubToken?: string | undefined;
+  /** Token printed by lowdiff-daemon; enables repo search in chat. */
+  daemonToken?: string | undefined;
   /** Set per provider; never leaves the service worker. */
   keys: Partial<Record<ProviderId, string>>;
   defaultMode: Mode;
@@ -41,6 +43,8 @@ export type Request =
       port: string;
       mode: Mode;
     }
+  | { type: 'ADD_REPO'; path: string }
+  | { type: 'LIST_REPOS' }
   | { type: 'OPEN_OPTIONS' };
 
 export interface ChatTurn {
@@ -61,6 +65,8 @@ export interface Failure {
   ok: false;
   error: string;
 }
+
+export type ReposReply = { ok: true; repos: string[] } | Failure;
 
 export type AnnotateReply = AnnotateOk | Failure;
 export type PublicSettingsReply = { ok: true; settings: PublicSettings } | Failure;

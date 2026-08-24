@@ -42,6 +42,9 @@ export function Overlay({ pr }: Props) {
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [typing, setTyping] = useState(false);
   const [input, setInput] = useState('');
+  const [activity, setActivity] = useState<string | null>(null);
+  const [usage, setUsage] = useState<string | null>(null);
+  const [repos, setRepos] = useState<string[]>([]);
 
   const notesRef = useRef<Note[]>([]);
   notesRef.current = notes;
@@ -139,6 +142,12 @@ export function Overlay({ pr }: Props) {
   );
 
   useEffect(() => {
+    void chrome.runtime
+      .sendMessage({ type: 'LIST_REPOS' })
+      .then((reply: { ok: boolean; repos?: string[] }) => {
+        if (reply.ok && reply.repos) setRepos(reply.repos);
+      })
+      .catch(() => {});
     void (async () => {
       const reply = (await chrome.runtime.sendMessage({
         type: 'GET_PUBLIC_SETTINGS',
@@ -167,7 +176,7 @@ export function Overlay({ pr }: Props) {
     let answer = '';
     let started = false;
 
-    port.onMessage.addListener((delta: { type: string; text?: string; error?: string }) => {
+    port.onMessage.addListener((delta: { type: string; text?: string; error?: string; label?: string; inputTokens?: number; outputTokens?: number; rounds?: number }) => {
       if (delta.type === 'text' && delta.text) {
         answer += delta.text;
         setTyping(false);
@@ -178,6 +187,17 @@ export function Overlay({ pr }: Props) {
           started = true;
           return next;
         });
+      } else if (delta.type === 'tool' && delta.label) {
+        setTyping(true);
+        setActivity(delta.label);
+      } else if (delta.type === 'usage') {
+        const tokens = `${((delta.inputTokens ?? 0) / 1000).toFixed(1)}k in / ${delta.outputTokens ?? 0} out`;
+        // Anthropic list price; close enough for a visibility line.
+        const dollars = ((delta.inputTokens ?? 0) * 5 + (delta.outputTokens ?? 0) * 25) / 1e6;
+        setUsage(
+          `${delta.rounds ? `${delta.rounds} search${delta.rounds === 1 ? '' : 'es'} · ` : ''}${tokens} ≈ $${dollars.toFixed(3)}`,
+        );
+        setActivity(null);
       } else if (delta.type === 'error') {
         setTyping(false);
         setMessages((prev) => [...prev, { role: 'assistant', content: `⚠ ${delta.error}` }]);
@@ -254,10 +274,20 @@ export function Overlay({ pr }: Props) {
         <ChatPanel
           messages={messages}
           typing={typing}
+          activity={activity}
+          usage={usage}
           input={input}
-          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`]}
+          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`, ...repos.map((r) => `repo:${r}`)]}
           onInput={setInput}
           onSend={() => send(input)}
+          onAddRepo={(path) => {
+            void chrome.runtime.sendMessage({ type: 'ADD_REPO', path }).then((reply: { ok: boolean; repos?: string[]; error?: string }) => {
+              if (reply.ok && reply.repos) setRepos(reply.repos);
+              else if (!reply.ok) {
+                setMessages((prev) => [...prev, { role: 'assistant', content: `⚠ ${reply.error}` }]);
+              }
+            });
+          }}
           onClose={() => setChatOpen(false)}
         />
       ) : (

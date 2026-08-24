@@ -1,0 +1,10 @@
+{
+  "name": "@lowdiff/daemon",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "bin": { "lowdiff-daemon": "./src/index.ts" },
+  "devDependencies": { "@types/node": "^22.10.5", "tsx": "^4.19.2" },
+  "scripts": { "start": "tsx src/index.ts" }
+}

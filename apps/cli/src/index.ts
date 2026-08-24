@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { anchorNotes } from '@lowdiff/core';
 import type { Mode } from '@lowdiff/core';
-import { GitHubContextProvider, parsePrUrl } from '@lowdiff/context';
+import { DaemonClient, GitHubContextProvider, parsePrUrl } from '@lowdiff/context';
 import { createLlmClient } from '@lowdiff/providers';
 import type { ProviderId } from '@lowdiff/providers/types';
 
@@ -136,6 +136,23 @@ async function main(): Promise<void> {
   const question = flag('chat');
   if (!question) return;
 
+  // With LOWDIFF_DAEMON_TOKEN set and the daemon running, chat can search
+  // registered repos — the same path the extension uses.
+  let tools;
+  const daemonToken = process.env['LOWDIFF_DAEMON_TOKEN'];
+  if (daemonToken) {
+    const daemon = new DaemonClient({ token: daemonToken });
+    const repoNames = await daemon.health();
+    if (repoNames && repoNames.length > 0) {
+      tools = {
+        repoNames,
+        search: (q: string, repo?: string) => daemon.search(q, repo),
+        read: (repo: string, path: string, startLine?: number) => daemon.read(repo, path, startLine),
+      };
+      process.stderr.write(`${DIM}repo search on: ${repoNames.join(', ')}${OFF}\n`);
+    }
+  }
+
   console.log(`\n${BOLD}> ${question}${OFF}\n`);
   for await (const delta of llm.chat({
     pr: { ...location, headSha: meta.headSha },
@@ -146,8 +163,16 @@ async function main(): Promise<void> {
     notes: grounded,
     history: [],
     question,
+    ...(tools ? { tools } : {}),
   })) {
     if (delta.type === 'text') process.stdout.write(delta.text);
+    else if (delta.type === 'tool') process.stderr.write(`${DIM}  ⚙ ${delta.label}${OFF}\n`);
+    else if (delta.type === 'usage') {
+      const dollars = ((delta.inputTokens * 5 + delta.outputTokens * 25) / 1e6).toFixed(3);
+      process.stderr.write(
+        `\n${DIM}${delta.rounds} tool rounds · ${delta.inputTokens} in / ${delta.outputTokens} out ≈ $${dollars}${OFF}\n`,
+      );
+    }
   }
   console.log('\n');
 }

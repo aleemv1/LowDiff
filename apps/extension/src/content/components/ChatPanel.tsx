@@ -6,10 +6,15 @@ import type { ChatTurn } from '../../shared/messages.js';
 interface Props {
   messages: ChatTurn[];
   typing: boolean;
+  /** Live tool activity, e.g. 'searching "useDebounce"'. */
+  activity: string | null;
+  /** Cost line for the last answer, or null before the first. */
+  usage: string | null;
   input: string;
   contextChips: string[];
   onInput: (value: string) => void;
   onSend: () => void;
+  onAddRepo: (path: string) => void;
   onClose: () => void;
 }
 
@@ -66,13 +71,18 @@ export function ChatPanel(props: Props) {
           </div>
         ))}
         {props.typing && (
-          <div style={{ font: `11.5px 'DM Sans',sans-serif`, color: C.faint }}>✦ thinking…</div>
+          <div style={{ font: `11.5px 'DM Sans',sans-serif`, color: C.faint }}>
+            ✦ {props.activity ?? 'thinking…'}
+          </div>
+        )}
+        {props.usage && !props.typing && (
+          <div style={{ font: `10.5px 'DM Sans',sans-serif`, color: C.faint }}>{props.usage}</div>
         )}
       </div>
 
       <div style={{ padding: '10px 14px 14px' }}>
         <div style={{ border: `1px solid ${C.accentBorder}`, borderRadius: '10px', boxShadow: '0 1px 3px rgba(20,30,60,.05)' }}>
-          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 0', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             {props.contextChips.map((chip) => (
               <span
                 key={chip}
@@ -82,6 +92,16 @@ export function ChatPanel(props: Props) {
                 @ {chip}
               </span>
             ))}
+            <span
+              title="Add a local repo for the AI to search (requires lowdiff-daemon)"
+              onClick={() => {
+                const path = prompt('Absolute path of a local repo to add for context:');
+                if (path) props.onAddRepo(path);
+              }}
+              style={{ color: C.faint, font: `600 11px 'DM Sans',sans-serif`, cursor: 'pointer', padding: '1px 6px', borderRadius: '4px', border: `1px solid ${C.line}` }}
+            >
+              +
+            </span>
           </div>
 
           <input

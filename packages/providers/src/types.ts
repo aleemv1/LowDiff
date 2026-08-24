@@ -42,11 +42,25 @@ export interface ChatMessage {
   content: string;
 }
 
+/**
+ * Lets chat search code beyond the diff. Implemented by the caller (the
+ * worker talks to the local daemon); adapters only see this interface.
+ *
+ * Absent tools mean a plain single-call chat — no loop, no extra cost.
+ */
+export interface CodeTools {
+  /** Registered repo names, listed in the prompt so searches are aimed. */
+  repoNames: string[];
+  search(query: string, repo?: string): Promise<string>;
+  read(repo: string, path: string, startLine?: number): Promise<string>;
+}
+
 export interface ChatRequest {
   pr: PrRef;
   title: string;
   body: string;
   files: FileDiff[];
+  tools?: CodeTools;
   /** The review summary already shown to the user, so chat can build on it. */
   summary: string;
   /** The grounded notes, so "Ask about this" refers to something the model sees. */
@@ -56,7 +70,11 @@ export interface ChatRequest {
   signal?: AbortSignal;
 }
 
-export type ChatDelta = { type: 'text'; text: string } | { type: 'done' };
+export type ChatDelta =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; label: string }
+  | { type: 'usage'; inputTokens: number; outputTokens: number; rounds: number }
+  | { type: 'done' };
 
 export interface LlmClient {
   readonly provider: ProviderId;
