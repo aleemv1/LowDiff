@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { C } from '../theme.js';
 import { Markdown } from './Markdown.js';
+import { Sparkle } from './Sparkle.js';
 import type { ChatTurn } from '../../shared/messages.js';
 
 interface Props {
@@ -38,7 +39,7 @@ export function ChatPanel(props: Props) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderBottom: `1px solid ${C.page}` }}>
         <span style={{ width: '20px', height: '20px', borderRadius: '6px', background: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
-          ✦
+          <Sparkle size={11} />
         </span>
         <span style={{ font: `700 12px 'DM Sans',sans-serif`, color: C.ink }}>Chat</span>
         <span onClick={props.onClose} style={{ marginLeft: 'auto', cursor: 'pointer', color: C.faint, fontSize: '12px', padding: '2px 6px' }}>

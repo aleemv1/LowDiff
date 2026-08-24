@@ -25,7 +25,9 @@ Writing rules:
   in plain language — what breaks, for whom — then the mechanism. Write for a
   reader who does not know the flags, APIs, or jargon involved: one concrete
   example beats an abstract rule. No preamble, no restating the line.
-- body: may use fenced code blocks and \`backticks\`; both are rendered.
+- body: may use fenced code blocks, \`backticks\`, and dash lists — all are
+  rendered. When a body covers more than one case or step, break it into a
+  short list instead of packing everything into one paragraph.
 - code: only when you can give a concrete fix. Prefer the narrowest change
   that resolves the finding over a rewrite — if one token, flag, or line fixes
   it, show exactly that. Omit it otherwise.

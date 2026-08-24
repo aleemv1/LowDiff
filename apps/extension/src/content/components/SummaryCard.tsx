@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import { C, KIND_STYLE } from '../theme.js';
+import { Sparkle } from './Sparkle.js';
 import { Markdown } from './Markdown.js';
 
 interface Props {
@@ -54,7 +55,7 @@ export function SummaryCard(props: Props) {
             fontSize: '13px', flex: 'none',
           }}
         >
-          ✦
+          <Sparkle size={13} />
         </span>
         <span style={{ font: `700 13px 'DM Sans',sans-serif`, color: C.ink }}>
           AI review of this pull request

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
+import { Sparkle } from './components/Sparkle.js';
 import { NotePopover } from './components/NotePopover.js';
 import { ChatPanel } from './components/ChatPanel.js';
 import { clearBadges, highlightNote, setActiveBadge, syncBadges } from './annotate.js';
@@ -58,6 +59,7 @@ export function Overlay({ pr }: Props) {
   notesRef.current = notes;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const select = useCallback((note: Note, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
@@ -238,6 +240,27 @@ export function Overlay({ pr }: Props) {
     });
   };
 
+  /**
+   * The pre-render position uses an estimated height. Once the popover has a
+   * real height, nudge it back on-screen if the estimate was short — the
+   * measurement happens before paint, so there is no visible jump.
+   */
+  useLayoutEffect(() => {
+    const el = popoverRef.current;
+    const base = rootRef.current;
+    if (!el || !base || !open) return;
+    const rect = el.getBoundingClientRect();
+    const overflow = rect.bottom - (window.innerHeight - 12);
+    const minTop = 12 - base.getBoundingClientRect().top;
+    if (overflow > 0) {
+      setOpen((current) =>
+        current ? { ...current, top: Math.max(minTop, current.top - overflow) } : current,
+      );
+    }
+    // Re-run when the note changes; open.top updates must not loop, so only
+    // shift when there is genuine overflow.
+  }, [open?.note]);
+
   const notesLost = visibleNotes.length - placed;
   const notesHidden = notes.length - visibleNotes.length;
 
@@ -335,7 +358,7 @@ export function Overlay({ pr }: Props) {
             fontSize: '22px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(91,91,214,.4)',
           }}
         >
-          💬
+          <Sparkle size={22} />
         </div>
       )}
     </div>

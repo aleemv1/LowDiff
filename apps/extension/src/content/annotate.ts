@@ -1,6 +1,7 @@
 import type { Note } from '@lowdiff/core';
 import type { DiffDom } from './dom/index.js';
 import { KIND_STYLE } from './theme.js';
+import { SPARKLE_SVG } from './components/Sparkle.js';
 
 // Badges live in GitHub's page, not our shadow root, so they cannot read the
 // --ld-* variables defined on :host. They use Primer's variables directly.
@@ -170,7 +171,7 @@ function createBadge(note: Note): HTMLElement {
   badge.style.top = '0.5lh';
 
   const visual = document.createElement('span');
-  visual.textContent = '✦';
+  visual.innerHTML = SPARKLE_SVG; // static constant, never model data
   Object.assign(visual.style, {
     display: 'inline-flex',
     alignItems: 'center',
