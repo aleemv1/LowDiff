@@ -84,6 +84,13 @@ export const STYLES = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   color: var(--ld-fg);
   margin: 0 0 20px;
+  /*
+   * The note popover is positioned in coordinates relative to this element,
+   * so it has to actually be the containing block. Without position:relative
+   * the browser resolves against the body and every popover is offset by
+   * whatever GitHub renders to the left of us.
+   */
+  position: relative;
 }
 
 @keyframes notePop { from { opacity: 0; transform: translateY(-6px) scale(.98) } to { opacity: 1; transform: none } }

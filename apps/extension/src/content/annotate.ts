@@ -54,11 +54,9 @@ export function syncBadges(
         onSelect({ note, element: badge });
       });
 
-      // position:relative on the cell so the badge can sit at its right edge
-      // without being torn out of the table layout.
-      if (getComputedStyle(target.codeCell).position === 'static') {
-        target.codeCell.style.position = 'relative';
-      }
+      // Appended inline, straight after the line's text. Absolute positioning
+      // at the row's right edge stranded the badge far from the code on wide
+      // screens, and let it collide with GitHub's sticky file header.
       target.codeCell.append(badge);
       placed++;
     }
@@ -79,7 +77,7 @@ export function setActiveBadge(active: HTMLElement | null): void {
     const on = el === active;
     el.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
     el.style.color = on ? '#fff' : style.color;
-    el.style.transform = on ? 'translateY(-50%) scale(1.15)' : 'translateY(-50%)';
+    el.style.transform = on ? 'scale(1.2)' : 'none';
   }
 }
 
@@ -93,25 +91,22 @@ function createBadge(note: Note): HTMLElement {
   badge.title = `${note.kind}: ${note.title}`;
   badge.textContent = '✦';
   Object.assign(badge.style, {
-    position: 'absolute',
-    right: '6px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: '17px',
-    height: '17px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    verticalAlign: 'middle',
+    marginLeft: '10px',
+    width: '16px',
+    height: '16px',
     borderRadius: '50%',
     border: `1.5px solid ${ACCENT}`,
     background: 'var(--bgColor-default, #fff)',
     color: style.color,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    font: `700 10px 'DM Sans', -apple-system, sans-serif`,
+    font: '700 10px -apple-system, BlinkMacSystemFont, sans-serif',
     lineHeight: '1',
     cursor: 'pointer',
-    zIndex: '5',
-    boxShadow: '0 1px 4px rgba(20,30,60,.25)',
     userSelect: 'none',
+    flex: 'none',
   } satisfies Partial<CSSStyleDeclaration>);
   return badge;
 }

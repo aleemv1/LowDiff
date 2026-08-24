@@ -14,7 +14,37 @@
     </style>
   </head>
   <body>
-    <div class="page"><div id="root"></div></div>
+    <div class="page">
+      <div id="root"></div>
+
+      <!--
+        A stand-in for GitHub's client-rendered diff, using the same semantic
+        attributes the modern adapter reads. Without it the harness has nothing
+        to attach badges to, and the whole placement path goes untested.
+      -->
+      <div id="diff-comparison-viewer-container">
+        <table role="grid" aria-label="Diff for: src/search/useSearch.ts" data-diff-anchor="diff-a">
+          <tbody>
+            <tr>
+              <td data-diff-side="right" data-line-number="25" data-first-unified-line-number-cell="false">25</td>
+              <td data-diff-side="right" data-line-number="25" data-line-anchor="diff-aR25">+  const debounced = useDebounce(query, 300);</td>
+            </tr>
+            <tr>
+              <td data-diff-side="right" data-line-number="26" data-first-unified-line-number-cell="false">26</td>
+              <td data-diff-side="right" data-line-number="26" data-line-anchor="diff-aR26">+  const results = fetchResults(debounced);</td>
+            </tr>
+          </tbody>
+        </table>
+        <table role="grid" aria-label="Diff for: src/api/client.ts" data-diff-anchor="diff-b">
+          <tbody>
+            <tr>
+              <td data-diff-side="right" data-line-number="59" data-first-unified-line-number-cell="false">59</td>
+              <td data-diff-side="right" data-line-number="59" data-line-anchor="diff-bR59">+  term: string,</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
     <script type="module" src="./dev.js"></script>
   </body>
 </html>
