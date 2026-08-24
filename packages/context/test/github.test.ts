@@ -143,3 +143,67 @@ describe('GitHubContextProvider default fetch', () => {
     }
   });
 });
+
+describe('GitHubContextProvider retries', () => {
+  const noSleep = () => Promise.resolve();
+
+  it('retries a 504 and succeeds', async () => {
+    let calls = 0;
+    const provider = new GitHubContextProvider({
+      sleepImpl: noSleep,
+      fetchImpl: (async () => {
+        calls++;
+        if (calls < 3) return new Response('', { status: 504 });
+        return new Response(JSON.stringify({ title: 't', body: '', head: { sha: 'ok' } }));
+      }) as typeof fetch,
+    });
+
+    await expect(provider.getPr({ owner: 'a', repo: 'b', number: 1 })).resolves.toMatchObject({
+      headSha: 'ok',
+    });
+    expect(calls).toBe(3);
+  });
+
+  it('gives up after the configured attempts', async () => {
+    let calls = 0;
+    const provider = new GitHubContextProvider({
+      retries: 2,
+      sleepImpl: noSleep,
+      fetchImpl: (async () => {
+        calls++;
+        return new Response('', { status: 502 });
+      }) as typeof fetch,
+    });
+
+    await expect(provider.getPr({ owner: 'a', repo: 'b', number: 1 })).rejects.toThrow(/502/);
+    expect(calls).toBe(2);
+  });
+
+  it('does not retry a 404 — it will never succeed', async () => {
+    let calls = 0;
+    const provider = new GitHubContextProvider({
+      sleepImpl: noSleep,
+      fetchImpl: (async () => {
+        calls++;
+        return new Response('', { status: 404 });
+      }) as typeof fetch,
+    });
+
+    await expect(provider.getPr({ owner: 'a', repo: 'b', number: 1 })).rejects.toThrow();
+    expect(calls).toBe(1);
+  });
+
+  it('does not retry a rate limit — waiting out the window is the fix', async () => {
+    let calls = 0;
+    const provider = new GitHubContextProvider({
+      sleepImpl: noSleep,
+      fetchImpl: (async () => {
+        calls++;
+        return new Response('', { status: 403, headers: { 'x-ratelimit-remaining': '0' } });
+      }) as typeof fetch,
+    });
+
+    await expect(provider.getPr({ owner: 'a', repo: 'b', number: 1 })).rejects.toThrow(/rate limit/);
+    expect(calls).toBe(1);
+  });
+});

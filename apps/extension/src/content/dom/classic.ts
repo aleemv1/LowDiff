@@ -26,8 +26,14 @@ export const classicDom: DiffDom = {
     const out: DomLine[] = [];
     for (const row of file.querySelectorAll('tr')) {
       const nums = row.querySelectorAll('td.blob-num');
-      const codeCell = row.querySelector('td.blob-code');
-      if (nums.length === 0 || !(codeCell instanceof HTMLElement)) continue;
+      const cell = row.querySelector('td.blob-code');
+      if (nums.length === 0 || !(cell instanceof HTMLElement)) continue;
+
+      // `.blob-code-inner` is display:table-cell, so a badge placed after it
+      // becomes a sibling cell and wraps onto its own line. It has to go
+      // inside the span, alongside the syntax-highlighted code.
+      const inner = cell.querySelector('.blob-code-inner');
+      const codeCell = inner instanceof HTMLElement ? inner : cell;
 
       // Cell order is [old, new]; a unified row may carry only one of them.
       const sides: Side[] = nums.length === 1 ? ['RIGHT'] : ['LEFT', 'RIGHT'];

@@ -8,6 +8,10 @@ export interface GitHubOptions {
   /** Fine-grained PAT. Optional: public repos work unauthenticated at 60 req/hr. */
   token?: string;
   fetchImpl?: typeof fetch;
+  /** Attempts per request, including the first. */
+  retries?: number;
+  /** Injected in tests so backoff does not make them slow. */
+  sleepImpl?: (ms: number) => Promise<void>;
 }
 
 interface GhFile {
@@ -41,6 +45,8 @@ function toStatus(status: string): FileDiff['status'] {
 export class GitHubContextProvider implements ContextProvider {
   private readonly token: string | undefined;
   private readonly fetchImpl: typeof fetch;
+  private readonly retries: number;
+  private readonly sleepImpl: (ms: number) => Promise<void>;
 
   constructor(options: GitHubOptions = {}) {
     this.token = options.token;
@@ -48,6 +54,9 @@ export class GitHubContextProvider implements ContextProvider {
     // called as `this.fetchImpl(...)`, the real fetch receives the provider
     // as its `this` and throws "Illegal invocation".
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.retries = options.retries ?? 3;
+    this.sleepImpl =
+      options.sleepImpl ?? ((ms) => new Promise((done) => setTimeout(done, ms)));
   }
 
   private async request<T>(path: string): Promise<T> {
@@ -57,7 +66,14 @@ export class GitHubContextProvider implements ContextProvider {
     };
     if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
 
-    const response = await this.fetchImpl(`${API}${path}`, { headers });
+    // GitHub returns 502/503/504 intermittently on healthy requests. Retrying
+    // is the difference between a working review and an error in the card.
+    let response!: Response;
+    for (let attempt = 1; attempt <= this.retries; attempt++) {
+      response = await this.fetchImpl(`${API}${path}`, { headers });
+      if (response.status < 500 || attempt === this.retries) break;
+      await this.sleepImpl(250 * 2 ** (attempt - 1));
+    }
 
     if (response.status === 403 || response.status === 429) {
       const remaining = response.headers.get('x-ratelimit-remaining');

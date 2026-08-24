@@ -54,9 +54,8 @@ export function syncBadges(
         onSelect({ note, element: badge });
       });
 
-      // Appended inline, straight after the line's text. Absolute positioning
-      // at the row's right edge stranded the badge far from the code on wide
-      // screens, and let it collide with GitHub's sticky file header.
+      // The adapter has already resolved the element that actually holds the
+      // code text, so the badge sits inline beside it.
       target.codeCell.append(badge);
       placed++;
     }
@@ -107,6 +106,7 @@ function createBadge(note: Note): HTMLElement {
     cursor: 'pointer',
     userSelect: 'none',
     flex: 'none',
+    whiteSpace: 'normal',
   } satisfies Partial<CSSStyleDeclaration>);
   return badge;
 }

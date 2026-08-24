@@ -188,3 +188,47 @@ describe('modernDom', () => {
     expect(placed).toBe(0);
   });
 });
+
+/**
+ * GitHub styles `.blob-code-inner` as display:table-cell. A badge placed after
+ * it becomes a sibling table cell and renders on its own line, so it has to go
+ * inside that span.
+ */
+describe('badge insertion point', () => {
+  beforeEach(() => {
+    document.documentElement.innerHTML = `
+      <div class="js-diff-progressive-container">
+        <div class="file" data-tagsearch-path="a.ts">
+          <table class="diff-table"><tbody>
+            <tr>
+              <td class="blob-num" data-line-number="1"></td>
+              <td class="blob-num" data-line-number="1"></td>
+              <td class="blob-code">
+                <span class="blob-code-inner"><span class="pl-s">+const a = 1;</span></span>
+              </td>
+            </tr>
+          </tbody></table>
+        </div>
+      </div>`;
+    clearBadges();
+  });
+
+  it('targets the inner code span, not the cell', () => {
+    expect(classicDom.lines('a.ts')[0]!.codeCell.className).toContain('blob-code-inner');
+  });
+
+  it('puts the badge inside that span', () => {
+    syncBadges(
+      [note({ anchor: { path: 'a.ts', side: 'RIGHT', line: 1, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    expect(badge.parentElement!.className).toContain('blob-code-inner');
+  });
+
+  it('falls back to the cell when there is no inner span', () => {
+    document.querySelector('.blob-code-inner')!.replaceWith('+const a = 1;');
+    expect(classicDom.lines('a.ts')[0]!.codeCell.className).toContain('blob-code');
+  });
+});
