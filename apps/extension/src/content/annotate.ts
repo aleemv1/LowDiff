@@ -5,6 +5,8 @@ import { KIND_STYLE } from './theme.js';
 // Badges live in GitHub's page, not our shadow root, so they cannot read the
 // --ld-* variables defined on :host. They use Primer's variables directly.
 const ACCENT = 'var(--fgColor-accent, #5b5bd6)';
+// Translucent so GitHub's own add/delete row colours still read through.
+const HIGHLIGHT_WASH = 'color-mix(in srgb, var(--fgColor-accent, #5b5bd6) 10%, transparent)';
 
 const BADGE_ATTR = 'data-lowdiff-badge';
 
@@ -54,14 +56,41 @@ export function syncBadges(
         onSelect({ note, element: badge });
       });
 
-      // The adapter has already resolved the element that actually holds the
-      // code text, so the badge sits inline beside it.
-      target.codeCell.append(badge);
+      // Prepended: the badge reads as a gutter marker beside the line number
+      // rather than trailing whatever length the code happens to be.
+      target.codeCell.prepend(badge);
       placed++;
     }
   }
 
   return placed;
+}
+
+const HIGHLIGHT_ATTR = 'data-lowdiff-highlit';
+
+/**
+ * Highlight the lines a note is about.
+ *
+ * A note may cover a whole function; `anchor.endLine` carries that span when
+ * the model reported one, so the reader sees the construct rather than one
+ * line pulled out of it.
+ */
+export function highlightNote(note: Note | null, dom: DiffDom): void {
+  for (const el of document.querySelectorAll<HTMLElement>(`[${HIGHLIGHT_ATTR}]`)) {
+    el.style.boxShadow = el.getAttribute(HIGHLIGHT_ATTR) ?? '';
+    el.removeAttribute(HIGHLIGHT_ATTR);
+  }
+  if (!note) return;
+
+  const last = note.anchor.endLine ?? note.anchor.line;
+  for (const line of dom.lines(note.anchor.path)) {
+    if (line.side !== note.anchor.side) continue;
+    if (line.line < note.anchor.line || line.line > last) continue;
+
+    // Stash whatever was there so the row is restored exactly on close.
+    line.row.setAttribute(HIGHLIGHT_ATTR, line.row.style.boxShadow);
+    line.row.style.boxShadow = `inset 3px 0 0 0 ${ACCENT}, inset 0 0 0 999px ${HIGHLIGHT_WASH}`;
+  }
 }
 
 export function clearBadges(): void {
@@ -94,7 +123,7 @@ function createBadge(note: Note): HTMLElement {
     alignItems: 'center',
     justifyContent: 'center',
     verticalAlign: 'middle',
-    marginLeft: '10px',
+    marginRight: '8px',
     width: '16px',
     height: '16px',
     borderRadius: '50%',

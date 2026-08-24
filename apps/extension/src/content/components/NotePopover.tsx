@@ -28,7 +28,7 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
         ...placement,
         zIndex: 40, background: C.surface,
         border: `1px solid ${C.line}`, borderRadius: '12px',
-        boxShadow: '0 12px 32px rgba(20,30,60,.16)', animation: 'notePop .14s ease-out',
+        boxShadow: '0 12px 32px rgba(0,0,0,.28)', animation: 'notePop .14s ease-out',
         whiteSpace: 'normal', overflow: 'hidden', textAlign: 'left',
       }}
     >

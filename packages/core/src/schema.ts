@@ -39,6 +39,12 @@ export function noteSchema(mode: Mode): Record<string, unknown> {
             path: { type: 'string' },
             side: { type: 'string', enum: ['LEFT', 'RIGHT'] },
             line: { type: 'integer', minimum: 1 },
+            endLine: {
+              type: 'integer',
+              minimum: 1,
+              description:
+                'Last line of the enclosing function or block, when the finding spans more than one line. Omit for single-line findings.',
+            },
             confidence: { type: 'string', enum: ['high', 'medium'] },
           },
         },
@@ -68,6 +74,9 @@ function isRawNote(value: unknown, kinds: readonly NoteKind[]): value is RawNote
     n['body'].length > 0 &&
     n['body'].length <= BODY_MAX &&
     (n['code'] === undefined || typeof n['code'] === 'string') &&
+    (n['endLine'] === undefined ||
+      n['endLine'] === null ||
+      (typeof n['endLine'] === 'number' && Number.isInteger(n['endLine']))) &&
     typeof n['path'] === 'string' &&
     typeof n['side'] === 'string' &&
     SIDES.has(n['side']) &&

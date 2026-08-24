@@ -68,6 +68,13 @@ export interface Anchor {
   side: 'LEFT' | 'RIGHT';
   line: number;
   /**
+   * Last line of the construct the note is about, when it spans more than one
+   * line — the enclosing function, block, or statement. Clicking the note
+   * highlights `line`..`endLine`, so the reader sees the whole thing rather
+   * than one line out of it.
+   */
+  endLine?: number;
+  /**
    * Hash of the anchored line's text. This is what survives a force-push:
    * on a new head SHA we re-anchor by hash before trusting the line number.
    */
@@ -95,6 +102,7 @@ export interface RawNote {
   path: string;
   side: 'LEFT' | 'RIGHT';
   line: number;
+  endLine?: number;
   confidence: 'high' | 'medium';
 }
 

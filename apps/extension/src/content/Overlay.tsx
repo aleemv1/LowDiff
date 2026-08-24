@@ -5,7 +5,7 @@ import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
 import { NotePopover } from './components/NotePopover.js';
 import { ChatPanel } from './components/ChatPanel.js';
-import { clearBadges, setActiveBadge, syncBadges } from './annotate.js';
+import { clearBadges, highlightNote, setActiveBadge, syncBadges } from './annotate.js';
 import { detectDiffDom } from './dom/index.js';
 import { watch } from './watch.js';
 
@@ -57,9 +57,19 @@ export function Overlay({ pr }: Props) {
     if (!base) return;
 
     setActiveBadge(element);
+    const dom = detectDiffDom();
+    if (dom) highlightNote(note, dom);
+    // Flip above the badge when there is not room below, so the popover is not
+    // cut off by the bottom of the viewport. The height is an estimate — note
+    // bodies are capped, so this is bounded — and it only picks a side.
+    const estimatedHeight = note.code ? 320 : 200;
+    const openUpward = rect.bottom + estimatedHeight > window.innerHeight;
+
     setOpen({
       note,
-      top: rect.bottom - base.top + 8,
+      top: openUpward
+        ? rect.top - base.top - estimatedHeight - 8
+        : rect.bottom - base.top + 8,
       // Right-align the 440px popover to the badge, clamped to the page width.
       left: Math.max(
         12 - base.left,
@@ -70,6 +80,8 @@ export function Overlay({ pr }: Props) {
 
   const closePopover = useCallback(() => {
     setActiveBadge(null);
+    const dom = detectDiffDom();
+    if (dom) highlightNote(null, dom);
     setOpen(null);
   }, []);
 

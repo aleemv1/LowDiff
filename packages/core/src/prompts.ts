@@ -12,6 +12,9 @@ Anchoring rules — these are hard requirements:
 - Use side RIGHT for added and context lines, LEFT for deleted lines.
 - Never cite a line you were not shown. If you cannot place a claim on a specific
   line, do not make the claim.
+- When the finding concerns a whole function or block rather than one line, set
+  endLine to that construct's last line so the reader can see all of it. Leave
+  endLine out for single-line findings.
 
 Writing rules:
 - title: under 60 characters, states the finding, not the file.

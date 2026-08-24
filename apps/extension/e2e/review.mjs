@@ -100,7 +100,31 @@ const state = await page.evaluate(() => {
   };
 });
 
-console.log('\n' + JSON.stringify(state, null, 2));
+// Clicking a badge should open its note and highlight the lines it covers.
+const clicked = await page.evaluate(() => {
+  const badge = document.querySelector('[data-lowdiff-badge]');
+  if (!badge) return null;
+  badge.click();
+  return true;
+});
+await page.waitForTimeout(600);
+const onClick = clicked
+  ? await page.evaluate(() => {
+      const lit = [...document.querySelectorAll('[data-lowdiff-highlit]')];
+      const host = document.getElementById('lowdiff-root');
+      const pop = host?.shadowRoot?.querySelector('[style*="440px"]');
+      return {
+        highlightedRows: lit.length,
+        highlightedLines: lit.map(
+          (r) => r.querySelector('[data-line-number]')?.getAttribute('data-line-number'),
+        ),
+        popoverOpen: Boolean(pop),
+        popoverTitle: (pop?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 90),
+      };
+    })
+  : { note: 'no badge to click' };
+
+console.log('\n' + JSON.stringify({ ...state, onClick }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 

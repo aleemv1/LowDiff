@@ -88,6 +88,11 @@ export function anchorNotes(raw: readonly RawNote[], diff: readonly FileDiff[]):
         path: note.path,
         side: note.side,
         line: note.line,
+        // A range that ends before it starts is meaningless; drop it rather
+        // than highlighting backwards.
+        ...(note.endLine !== undefined && note.endLine > note.line
+          ? { endLine: note.endLine }
+          : {}),
         lineHash: hashLine(line.text),
       },
     });

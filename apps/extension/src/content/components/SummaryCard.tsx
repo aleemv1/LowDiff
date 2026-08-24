@@ -35,9 +35,13 @@ export function SummaryCard(props: Props) {
       style={{
         border: `1px solid ${C.accentBorder}`,
         borderRadius: '12px',
-        background: `linear-gradient(180deg,#faf9ff,${C.surface})`,
-        marginBottom: '20px',
-        boxShadow: '0 2px 10px rgba(91,91,214,.08)',
+        // Solid, not a gradient: the old fade was mixed from a hardcoded
+        // light tint, so on a dark theme the card faded to the wrong colour.
+        background: C.surface,
+        marginBottom: '16px',
+        // Clears GitHub's sticky PR header when the card is scrolled to.
+        scrollMarginTop: '120px',
+        boxShadow: 'none',
         overflow: 'hidden',
       }}
     >
