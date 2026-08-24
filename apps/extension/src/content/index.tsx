@@ -6,6 +6,7 @@ import { watch } from './watch.js';
 import { STYLES } from './theme.js';
 
 const HOST_ID = 'lowdiff-root';
+const OVERLAY_HOST_ID = 'lowdiff-overlay-root';
 const TAG = '[LowDiff]';
 
 declare const __LOWDIFF_BUILD__: string;
@@ -80,14 +81,30 @@ function mount(): boolean {
   const container = document.createElement('div');
   shadow.append(container);
 
+  // Floating UI (popover, chat, button) lives in its own host on
+  // document.body. Inside GitHub's diff column, one transformed or
+  // `contain`-ing ancestor silently re-bases position:fixed onto itself —
+  // the popover positioned against the wrong box and landed off-screen.
+  // body has no such ancestors.
+  const overlayHost = document.createElement('div');
+  overlayHost.id = OVERLAY_HOST_ID;
+  document.body.append(overlayHost);
+  const overlayShadow = overlayHost.attachShadow({ mode: 'open' });
+  const overlayStyle = document.createElement('style');
+  overlayStyle.textContent = STYLES;
+  overlayShadow.append(overlayStyle);
+  const overlayContainer = document.createElement('div');
+  overlayShadow.append(overlayContainer);
+
   console.info(TAG, 'mounted inside', anchor.tagName, anchor.id || anchor.className || '(anon)');
-  render(<Overlay pr={location} />, container);
+  render(<Overlay pr={location} overlayRoot={overlayContainer} />, container);
   return true;
 }
 
 function unmount(): void {
   clearBadges();
   document.getElementById(HOST_ID)?.remove();
+  document.getElementById(OVERLAY_HOST_ID)?.remove();
 }
 
 /**

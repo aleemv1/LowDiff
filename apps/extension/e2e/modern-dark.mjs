@@ -126,6 +126,10 @@ async function open(target) {
 
 await open(URL);
 await page.waitForTimeout(2500);
+// Scroll the diff into view first, like a real reader — the click must then
+// survive whatever scroll events the browser fires around it.
+await page.evaluate(() => document.querySelector('table[role="grid"]')?.scrollIntoView({ block: 'center' }));
+await page.waitForTimeout(400);
 
 const state = await page.evaluate(() => {
   const host = document.getElementById('lowdiff-root');
@@ -166,7 +170,7 @@ const state = await page.evaluate(() => {
 
 await page.waitForTimeout(400);
 const popover = await page.evaluate(() => {
-  const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
   const pre = root?.querySelector('pre');
   const label = [...(root?.querySelectorAll('span') ?? [])].find((s) => s.textContent === 'yaml');
   const chips = [...(root?.querySelectorAll('code') ?? [])];

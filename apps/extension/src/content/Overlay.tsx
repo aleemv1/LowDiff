@@ -1,3 +1,4 @@
+import { createPortal } from 'preact/compat';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
@@ -12,6 +13,8 @@ import { watch } from './watch.js';
 
 interface Props {
   pr: PrLocation;
+  /** Container in the document.body-level shadow host for floating UI. */
+  overlayRoot: Element;
 }
 
 interface Open {
@@ -29,7 +32,7 @@ const POPOVER_WIDTH = 440;
  * own diff rows by `syncBadges`, so the annotations sit on the real diff the
  * reviewer is already reading rather than on a copy of it.
  */
-export function Overlay({ pr }: Props) {
+export function Overlay({ pr, overlayRoot }: Props) {
   const [mode, setMode] = useState<Mode>('review');
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
@@ -330,6 +333,8 @@ export function Overlay({ pr }: Props) {
         </div>
       )}
 
+      {createPortal(
+        <>
       {open && (
         <div
           ref={popoverRef}
@@ -388,6 +393,9 @@ export function Overlay({ pr }: Props) {
         >
           <Sparkle size={22} />
         </div>
+      )}
+        </>,
+        overlayRoot,
       )}
     </div>
   );

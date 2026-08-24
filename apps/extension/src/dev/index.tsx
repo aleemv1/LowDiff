@@ -161,7 +161,10 @@ const style = document.createElement('style');
 style.textContent = STYLES.replaceAll(':host', ':root');
 document.head.append(style);
 
+const overlayRoot = document.createElement('div');
+document.body.append(overlayRoot);
+
 render(
-  <Overlay pr={{ owner: 'acme', repo: 'search-api', number: 412 }} />,
+  <Overlay pr={{ owner: 'acme', repo: 'search-api', number: 412 }} overlayRoot={overlayRoot} />,
   document.getElementById('root')!,
 );

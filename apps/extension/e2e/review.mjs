@@ -112,7 +112,7 @@ const onClick = clicked
   ? await page.evaluate(() => {
       const lit = [...document.querySelectorAll('[data-lowdiff-highlit]')];
       const host = document.getElementById('lowdiff-root');
-      const pop = host?.shadowRoot?.querySelector('[style*="440px"]');
+      const pop = document.getElementById('lowdiff-overlay-root')?.shadowRoot?.querySelector('[style*="440px"]');
       return {
         highlightedRows: lit.length,
         highlightedLines: lit.map(
