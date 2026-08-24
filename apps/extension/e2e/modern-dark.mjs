@@ -149,6 +149,10 @@ const state = await page.evaluate(() => {
     cardAboveFirstFile: Boolean(hostRect && firstFile && hostRect.top < firstFile.getBoundingClientRect().top),
     cardBelowPrTitle: Boolean(hostRect && title && hostRect.top > title.getBoundingClientRect().top),
     cardWidth: hostRect ? Math.round(hostRect.width) : null,
+    summaryTextWidth: (() => {
+      const body = host?.shadowRoot?.querySelector('.root p');
+      return body ? Math.round(body.getBoundingClientRect().width) : null;
+    })(),
     columnWidth: firstFile ? Math.round(firstFile.getBoundingClientRect().width) : null,
     badges: badges.length,
     badgeParentIsGutter: badges.map((b) => !b.parentElement?.hasAttribute('data-line-anchor')),

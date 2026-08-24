@@ -118,7 +118,6 @@ export function SummaryCard(props: Props) {
             padding: '0 16px 14px 52px',
             font: `13px/1.65 'DM Sans',sans-serif`,
             color: C.body,
-            maxWidth: '900px',
           }}
         >
           {props.busy && props.notes.length === 0 ? (
