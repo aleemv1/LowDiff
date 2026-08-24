@@ -12,6 +12,9 @@
     },
     {
       "path": "./apps/cli"
+    },
+    {
+      "path": "./apps/eval"
     }
   ]
 }
