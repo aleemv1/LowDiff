@@ -135,11 +135,21 @@ const state = await page.evaluate(() => {
     ? getComputedStyle(card.firstElementChild).backgroundColor
     : null;
 
-  badges[0]?.click();
+  badges[1]?.click();
   const lit = [...document.querySelectorAll('[data-lowdiff-highlit]')];
+
+  // The card must sit above the first file and inside the diff column, not
+  // above the PR header.
+  const firstFile = document.querySelector('[role="region"][id^="diff-"]');
+  const title = document.querySelector('h1');
+  const hostRect = host?.getBoundingClientRect();
 
   return {
     mounted: Boolean(host?.shadowRoot),
+    cardAboveFirstFile: Boolean(hostRect && firstFile && hostRect.top < firstFile.getBoundingClientRect().top),
+    cardBelowPrTitle: Boolean(hostRect && title && hostRect.top > title.getBoundingClientRect().top),
+    cardWidth: hostRect ? Math.round(hostRect.width) : null,
+    columnWidth: firstFile ? Math.round(firstFile.getBoundingClientRect().width) : null,
     badges: badges.length,
     badgeParentIsGutter: badges.map((b) => !b.parentElement?.hasAttribute('data-line-anchor')),
     badgeLines: badges.map((b) => b.parentElement?.getAttribute('data-line-number')),
@@ -153,11 +163,16 @@ const popover = await page.evaluate(() => {
   const root = document.getElementById('lowdiff-root')?.shadowRoot;
   const pre = root?.querySelector('pre');
   const label = [...(root?.querySelectorAll('span') ?? [])].find((s) => s.textContent === 'yaml');
+  const chips = [...(root?.querySelectorAll('code') ?? [])];
   return {
     open: Boolean(root?.querySelector('[style*="440px"]')),
     codeBlockRendered: Boolean(pre),
     languageLabel: Boolean(label),
     literalFences: (root?.textContent ?? '').includes('```'),
+    inlineCodeChips: chips.length,
+    chipText: chips.map((c) => c.textContent),
+    // A backtick still in the rendered text means the span was not parsed.
+    literalBackticks: (root?.textContent ?? '').includes('`'),
   };
 });
 

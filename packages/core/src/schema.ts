@@ -21,8 +21,9 @@ export function noteSchema(mode: Mode): Record<string, unknown> {
     properties: {
       summary: {
         type: 'string',
-        description: 'One paragraph on what this PR does and its main risk, if any.',
-        maxLength: 1200,
+        description:
+          'At most two sentences: what the change does, then the single most important problem with it, if any. No preamble, no restating the diff, no hedging.',
+        maxLength: 400,
       },
       notes: {
         type: 'array',

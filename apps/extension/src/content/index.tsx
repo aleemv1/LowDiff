@@ -18,9 +18,6 @@ console.info(TAG, 'content script loaded', window.location.pathname);
  * backstop that exists on every generation.
  */
 const ANCHORS = [
-  // Client-rendered view: the diff area itself, so the card lands directly
-  // above the first file rather than over the PR header.
-  '#diff-comparison-viewer-container',
   '[data-testid="diff-view"]',
   // Classic server-rendered view.
   '.js-diff-progressive-container',
@@ -28,12 +25,24 @@ const ANCHORS = [
   '.diff-view',
 ];
 
+/**
+ * Where the summary card goes.
+ *
+ * The newer view's outer container (#diff-comparison-viewer-container) wraps
+ * the PR header as well, so prepending there puts the card above the title
+ * instead of above the diff. The file regions' shared parent is the diff
+ * column itself, which is what we actually want — and it is also why the card
+ * inherits the column's width rather than the page's.
+ */
 function findAnchor(): Element | null {
+  const firstFile = document.querySelector('[role="region"][id^="diff-"]');
+  if (firstFile?.parentElement) return firstFile.parentElement;
+
   for (const selector of ANCHORS) {
     const found = document.querySelector(selector);
     if (found) return found;
   }
-  return null;
+  return document.querySelector('#diff-comparison-viewer-container');
 }
 
 function mount(): boolean {

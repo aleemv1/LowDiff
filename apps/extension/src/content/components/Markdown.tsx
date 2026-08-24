@@ -14,11 +14,14 @@ function inline(text: string, key: number) {
     <code
       key={key}
       style={{
-        font: '0.92em ui-monospace, SFMono-Regular, Menlo, monospace',
-        background: C.accentTint,
+        font: '0.9em ui-monospace, SFMono-Regular, Menlo, monospace',
+        // The accent tint alone was nearly invisible on GitHub's dark themes;
+        // the muted surface plus a border reads on both.
+        background: C.page,
+        border: `1px solid ${C.line}`,
         color: C.accentDark,
         borderRadius: '4px',
-        padding: '1px 5px',
+        padding: '0.5px 4px',
         wordBreak: 'break-word',
       }}
     >

@@ -17,8 +17,13 @@ Anchoring rules — these are hard requirements:
   endLine out for single-line findings.
 
 Writing rules:
+- summary: at most two sentences. What the change does, then the one problem
+  that matters most, if any. Do not restate the diff, list every finding, or
+  explain your reasoning. A reviewer reads this in five seconds.
 - title: under 60 characters, states the finding, not the file.
-- body: under 600 characters. Say what is wrong and why it matters. No preamble.
+- body: under 600 characters, and shorter is better. Say what is wrong and why
+  it matters, then stop. No preamble, no restating the line, no summarising
+  what you just said.
 - body: may use fenced code blocks and \`backticks\`; both are rendered.
 - code: only when you can give a concrete fix. Omit it otherwise.
 - confidence: "high" only when the diff alone proves it. Use "medium" when the
