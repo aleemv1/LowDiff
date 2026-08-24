@@ -30,20 +30,52 @@ function inline(text: string, key: number) {
   );
 }
 
+function spans(text: string) {
+  return parseSpans(text).map((span, j) =>
+    span.type === 'code' ? (
+      inline(span.text, j)
+    ) : span.type === 'bold' ? (
+      <b key={j}>{span.text}</b>
+    ) : (
+      span.text
+    ),
+  );
+}
+
 export function Markdown({ text, font }: Props) {
   return (
     <>
-      {parseBlocks(text).map((block, i) =>
-        block.type === 'code' ? (
-          <CodeBlock key={i} code={block.code} lang={block.lang} />
-        ) : (
-          <p key={i} style={{ margin: i === 0 ? '0 0 8px' : '8px 0', font, whiteSpace: 'pre-wrap' }}>
-            {parseSpans(block.text).map((span, j) =>
-              span.type === 'code' ? inline(span.text, j) : span.text,
-            )}
-          </p>
-        ),
-      )}
+      {parseBlocks(text).map((block, i) => {
+        switch (block.type) {
+          case 'code':
+            return <CodeBlock key={i} code={block.code} lang={block.lang} />;
+          case 'heading':
+            return (
+              <div
+                key={i}
+                style={{ margin: '14px 0 4px', font: `700 1.05em/1.4 inherit`, color: C.ink }}
+              >
+                {spans(block.text)}
+              </div>
+            );
+          case 'list':
+            return (
+              <ul key={i} style={{ margin: '6px 0', paddingLeft: '18px', font }}>
+                {block.items.map((item, j) => (
+                  <li key={j} style={{ margin: '3px 0' }}>
+                    {spans(item)}
+                  </li>
+                ))}
+              </ul>
+            );
+          default:
+            return (
+              <p key={i} style={{ margin: i === 0 ? '0 0 8px' : '8px 0', font, whiteSpace: 'pre-wrap' }}>
+                {spans(block.text)}
+              </p>
+            );
+        }
+      })}
     </>
   );
 }

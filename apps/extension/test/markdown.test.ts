@@ -77,3 +77,57 @@ describe('parseSpans', () => {
     expect(parseSpans('a `b\nc` d').every((s) => s.type === 'plain')).toBe(true);
   });
 });
+
+describe('parseBlocks: headings, lists, tables', () => {
+  it('parses a heading', () => {
+    expect(parseBlocks('## Practical severity')).toEqual([
+      { type: 'heading', text: 'Practical severity' },
+    ]);
+  });
+
+  it('groups consecutive dash items into one list', () => {
+    expect(parseBlocks('- first\n- second')).toEqual([
+      { type: 'list', items: ['first', 'second'] },
+    ]);
+  });
+
+  it('separates a list from surrounding prose', () => {
+    const blocks = parseBlocks('intro:\n- a\n- b\nafter');
+    expect(blocks.map((b) => b.type)).toEqual(['text', 'list', 'text']);
+  });
+
+  it('drops a table divider row entirely', () => {
+    expect(parseBlocks('|---|---|')).toEqual([]);
+  });
+
+  it('flattens a table row into a sentence', () => {
+    expect(parseBlocks('| `openai_api_key` | trailing `_` |')).toEqual([
+      { type: 'text', text: '`openai_api_key` — trailing `_`' },
+    ]);
+  });
+
+  it('does not treat a heading inside a fence as a heading', () => {
+    const blocks = parseBlocks('```\n## not a heading\n```');
+    expect(blocks).toEqual([{ type: 'code', lang: '', code: '## not a heading' }]);
+  });
+
+  it('does not treat a dash item inside a fence as a list', () => {
+    const blocks = parseBlocks('```yaml\n- uses: actions/checkout@v4\n```');
+    expect(blocks[0]).toEqual({ type: 'code', lang: 'yaml', code: '- uses: actions/checkout@v4' });
+  });
+});
+
+describe('parseSpans: bold', () => {
+  it('parses bold spans', () => {
+    expect(parseSpans('a **big** deal')).toEqual([
+      { type: 'plain', text: 'a ' },
+      { type: 'bold', text: 'big' },
+      { type: 'plain', text: ' deal' },
+    ]);
+  });
+
+  it('mixes bold and code in one line', () => {
+    const kinds = parseSpans('**note**: `x` differs').map((s) => s.type);
+    expect(kinds).toEqual(['bold', 'plain', 'code', 'plain']);
+  });
+});

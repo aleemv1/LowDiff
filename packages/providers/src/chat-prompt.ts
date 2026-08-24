@@ -41,7 +41,9 @@ your earlier review of it are below.
 - Cite locations as path:line when referring to specific code.
 - Be brief. Answer the question asked; do not summarise the whole PR.
 - Put code in fenced blocks with a language tag, and identifiers in backticks.
-  Both are rendered.
+  Short headings, dash lists, and **bold** render too.
+- Never use tables — the panel is 400px wide and they cannot be laid out.
+  Use a dash list with one line per case instead.
 - When the question refers to one of your findings, build on it rather than
   repeating it back.
 
