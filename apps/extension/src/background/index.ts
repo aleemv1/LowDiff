@@ -4,7 +4,6 @@ import { createLlmClient } from '@lowdiff/providers';
 import type {
   AnnotateReply,
   ChatTurn,
-  DiffReply,
   PrLocation,
   PublicSettingsReply,
   Request,
@@ -42,14 +41,12 @@ chrome.runtime.onMessage.addListener((message: Request, _sender, sendResponse) =
 
 async function handle(
   message: Request,
-): Promise<AnnotateReply | PublicSettingsReply | DiffReply | { ok: true }> {
+): Promise<AnnotateReply | PublicSettingsReply | { ok: true }> {
   switch (message.type) {
     case 'GET_PUBLIC_SETTINGS': {
       const settings = await loadSettings();
       return { ok: true, settings: toPublicSettings(settings) };
     }
-    case 'GET_DIFF':
-      return getDiff(message.pr);
     case 'ANNOTATE':
       return annotate(message.pr, message.mode, message.refresh ?? false);
     case 'CHAT':
@@ -59,21 +56,6 @@ async function handle(
       await chrome.runtime.openOptionsPage();
       return { ok: true };
   }
-}
-
-/**
- * The content script cannot fetch this itself: it runs in github.com's page
- * context, so its requests are subject to that page's CSP and CORS. The
- * worker has host permissions and the stored token.
- */
-async function getDiff(pr: PrLocation): Promise<DiffReply> {
-  const settings = await loadSettings();
-  const github = new GitHubContextProvider(
-    settings.githubToken ? { token: settings.githubToken } : {},
-  );
-  const meta = await github.getPr(pr);
-  const files = await github.getDiff({ ...pr, headSha: meta.headSha });
-  return { ok: true, files };
 }
 
 async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<AnnotateReply> {
