@@ -26,7 +26,9 @@ Writing rules:
   reader who does not know the flags, APIs, or jargon involved: one concrete
   example beats an abstract rule. No preamble, no restating the line.
 - body: may use fenced code blocks and \`backticks\`; both are rendered.
-- code: only when you can give a concrete fix. Omit it otherwise.
+- code: only when you can give a concrete fix. Prefer the narrowest change
+  that resolves the finding over a rewrite — if one token, flag, or line fixes
+  it, show exactly that. Omit it otherwise.
 - confidence: "high" only when the diff alone proves it. Use "medium" when the
   conclusion depends on code you were not shown.`;
 
@@ -40,8 +42,12 @@ notes array. Do not pad. Do not explain what the code does. Do not comment on
 style, naming, or formatting.
 
 Emit a note only for:
-- RISK: a bug, race, or incorrect behaviour this diff introduces.
-- SECURITY: an exploitable weakness.
+- RISK: incorrect behaviour this diff introduces — a bug, race, crash, or data
+  loss that happens in normal operation, no attacker required.
+- SECURITY: a weakness an attacker can exploit, or secrets exposed. The test
+  is attacker involvement: a session-handling bug that misbehaves on its own
+  is RISK; one an attacker can abuse for access is SECURITY. If both apply,
+  choose the attacker-facing kind only when the exploit path is concrete.
 - BREAKING: a change to a public interface that will break existing callers.
 
 Before emitting each note, ask whether a reviewer seeing it would act on it. If

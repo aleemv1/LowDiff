@@ -66,7 +66,10 @@ export const CASES: EvalCase[] = [
       '   return redirect("/login");',
       ' }',
     ].join('\n'),
-    expect: { kind: ['RISK'], line: 22, what: 'await removed, so destroy races the redirect' },
+    // SECURITY is also accepted: a session that survives logout is usable
+    // by whoever holds the cookie, which meets the attacker-involvement
+    // test the review prompt defines.
+    expect: { kind: ['RISK', 'SECURITY'], line: 22, what: 'await removed, so destroy races the redirect' },
   },
   {
     id: 'breaking-signature',
