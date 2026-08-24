@@ -27,10 +27,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 });
 
-chrome.action.onClicked.addListener(() => {
-  void chrome.runtime.openOptionsPage();
-});
-
 chrome.runtime.onMessage.addListener((message: Request, _sender, sendResponse) => {
   handle(message)
     .then(sendResponse)

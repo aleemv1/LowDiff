@@ -16,6 +16,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         options: resolve(root, 'src/options/index.tsx'),
+        popup: resolve(root, 'src/popup/index.tsx'),
         dev: resolve(root, 'src/dev/index.tsx'),
       },
       output: {
@@ -32,6 +33,7 @@ export default defineConfig({
         mkdirSync(resolve(root, 'dist'), { recursive: true });
         copyFileSync(resolve(root, 'manifest.json'), resolve(root, 'dist/manifest.json'));
         copyFileSync(resolve(root, 'src/options/options.html'), resolve(root, 'dist/options.html'));
+        copyFileSync(resolve(root, 'src/popup/popup.html'), resolve(root, 'dist/popup.html'));
         copyFileSync(resolve(root, 'src/dev/dev.html'), resolve(root, 'dist/dev.html'));
         cpSync(resolve(root, 'public/icons'), resolve(root, 'dist/icons'), { recursive: true });
       },
