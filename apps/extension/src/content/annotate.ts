@@ -56,6 +56,10 @@ export function syncBadges(
         event.stopPropagation();
         onSelect({ note, element: badge });
       });
+      // Clicking would focus the badge (it is tabbable), and focusing makes
+      // the browser scroll it into view — a scroll event on the same click
+      // that opened the popover, which anything scroll-sensitive misreads.
+      badge.addEventListener('mousedown', (event) => event.preventDefault());
 
       // Absolutely positioned inside the line-number cell, so it sits beside
       // the number without entering any layout GitHub owns. Injecting into the

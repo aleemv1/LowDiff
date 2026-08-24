@@ -78,11 +78,10 @@ export function Overlay({ pr }: Props) {
     // where we assumed — one transformed or containing ancestor and the
     // popover landed nowhere visible. Fixed coordinates cannot miss; the
     // layout effect below corrects any bottom overflow after render.
-    setOpen({
-      note,
-      top: Math.max(12, Math.min(anchorRect.bottom + 8, window.innerHeight - 160)),
-      left: Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12)),
-    });
+    const top = Math.max(12, Math.min(anchorRect.bottom + 8, window.innerHeight - 160));
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12));
+    console.info('[LowDiff] popover open', { top, left, lit: Boolean(lit) });
+    setOpen({ note, top, left });
   }, []);
 
   const closePopover = useCallback(() => {
@@ -266,12 +265,24 @@ export function Overlay({ pr }: Props) {
     }
   }, [open?.note]);
 
-  /** Fixed positioning detaches from the page on scroll; close instead of drifting. */
+  /**
+   * Fixed positioning detaches from the page on scroll, so close rather than
+   * drift — but not on the micro-scrolls the browser itself causes around the
+   * opening click (focus adjustments, GitHub's own nudges). A real scroll has
+   * distance and happens after the click settles.
+   */
   useEffect(() => {
     if (!open) return;
-    const onScroll = () => closePopover();
-    window.addEventListener('scroll', onScroll, { passive: true, once: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const openedAt = performance.now();
+    const startY = window.scrollY;
+    const onScroll = () => {
+      if (performance.now() - openedAt < 300) return;
+      if (Math.abs(window.scrollY - startY) < 48) return;
+      closePopover();
+    };
+    // Capture phase: GitHub scrolls nested containers, and scroll does not bubble.
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', onScroll, { capture: true });
   }, [open, closePopover]);
 
   const notesLost = visibleNotes.length - placed;
