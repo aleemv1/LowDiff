@@ -145,7 +145,10 @@ function createBadge(note: Note): HTMLElement {
     // Straddles the gutter's right edge so it never covers the line number,
     // however many digits that number has.
     right: '-8px',
-    top: '50%',
+    // Centred on the FIRST text line, not the cell: when a long line
+    // soft-wraps, the cell grows but the line number stays top-aligned, and a
+    // 50% badge floats between the wrapped rows. 1lh tracks the line height.
+    top: '10px',
     transform: 'translateY(-50%)',
     display: 'inline-flex',
     alignItems: 'center',
@@ -164,5 +167,7 @@ function createBadge(note: Note): HTMLElement {
     flex: 'none',
     whiteSpace: 'normal',
   } satisfies Partial<CSSStyleDeclaration>);
+  // Overrides the 10px fallback where the lh unit is supported (Chrome 109+).
+  badge.style.top = '0.5lh';
   return badge;
 }

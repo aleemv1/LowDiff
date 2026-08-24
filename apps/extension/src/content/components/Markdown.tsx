@@ -22,7 +22,11 @@ function inline(text: string, key: number) {
         color: C.accentDark,
         borderRadius: '4px',
         padding: '0.5px 4px',
-        wordBreak: 'break-word',
+        // Identifiers must not split mid-name — `openai_cl\nient` reads as a
+        // different symbol. Only spans too long for the popover may wrap.
+        whiteSpace: text.length <= 32 ? 'nowrap' : 'normal',
+        wordBreak: 'normal',
+        overflowWrap: 'anywhere',
       }}
     >
       {text}

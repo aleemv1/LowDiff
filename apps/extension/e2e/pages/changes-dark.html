@@ -41,7 +41,7 @@
       main { max-width: 1280px; margin: 0 auto; padding: 16px; }
       table { border-collapse: collapse; width: 100%;
               font: 12px/1.9 ui-monospace, SFMono-Regular, Menlo, monospace; }
-      td { padding: 0 8px; white-space: pre; }
+      td { padding: 0 8px; white-space: pre-wrap; word-break: break-all; vertical-align: top; }
       td[data-first-unified-line-number-cell] {
         width: 44px; text-align: right; color: var(--fgColor-muted);
         background: var(--diffBlob-additionNum-bgColor); user-select: none;
@@ -69,7 +69,7 @@
                   <td role="gridcell" data-diff-side="right" data-line-number="1"
                       data-first-unified-line-number-cell="false">1</td>
                   <td role="gridcell" data-diff-side="right" data-line-number="1"
-                      data-line-anchor="diff-aaaR1">+10000000$usdc</td>
+                      data-line-anchor="diff-aaaR1">+10000000$usdc — a deliberately long wrapped line to prove the badge sits beside the number, not floating mid-cell: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</td>
                 </tr>
                 <tr>
                   <td role="gridcell" data-diff-side="right" data-line-number="2"
