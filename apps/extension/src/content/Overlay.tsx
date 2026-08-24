@@ -63,11 +63,6 @@ export function Overlay({ pr }: Props) {
 
   const select = useCallback((note: Note, element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
-    // Coordinates are relative to `.root`, which is the popover's containing
-    // block — page coordinates would be offset by whatever GitHub positions
-    // around us.
-    const base = rootRef.current?.getBoundingClientRect();
-    if (!base) return;
 
     setActiveBadge(element);
     const dom = detectDiffDom();
@@ -77,22 +72,16 @@ export function Overlay({ pr }: Props) {
     // the badge put the popover on top of the very lines it had just
     // highlighted, which defeats the point of highlighting them.
     const anchorRect = lit ?? rect;
-    // Flip above the badge when there is not room below, so the popover is not
-    // cut off by the bottom of the viewport. The height is an estimate — note
-    // bodies are capped, so this is bounded — and it only picks a side.
-    const estimatedHeight = note.code ? 320 : 200;
-    const openUpward = anchorRect.bottom + estimatedHeight > window.innerHeight;
 
+    // Viewport (position:fixed) coordinates, like the chat button. Absolute
+    // positioning depended on a containing block inside GitHub's DOM being
+    // where we assumed — one transformed or containing ancestor and the
+    // popover landed nowhere visible. Fixed coordinates cannot miss; the
+    // layout effect below corrects any bottom overflow after render.
     setOpen({
       note,
-      top: openUpward
-        ? anchorRect.top - base.top - estimatedHeight - 8
-        : anchorRect.bottom - base.top + 8,
-      // Aligned to the badge's column, clamped to the page width.
-      left: Math.max(
-        12 - base.left,
-        Math.min(rect.left - base.left, window.innerWidth - base.left - POPOVER_WIDTH - 12),
-      ),
+      top: Math.max(12, Math.min(anchorRect.bottom + 8, window.innerHeight - 160)),
+      left: Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12)),
     });
   }, []);
 
@@ -261,6 +250,30 @@ export function Overlay({ pr }: Props) {
     // shift when there is genuine overflow.
   }, [open?.note]);
 
+  /**
+   * The open position guesses; the rendered popover knows. Before paint,
+   * shift it up if it overflows the bottom of the viewport.
+   */
+  useLayoutEffect(() => {
+    const el = popoverRef.current;
+    if (!el || !open) return;
+    const rect = el.getBoundingClientRect();
+    const overflow = rect.bottom - (window.innerHeight - 12);
+    if (overflow > 1) {
+      setOpen((current) =>
+        current ? { ...current, top: Math.max(12, current.top - overflow) } : current,
+      );
+    }
+  }, [open?.note]);
+
+  /** Fixed positioning detaches from the page on scroll; close instead of drifting. */
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => closePopover();
+    window.addEventListener('scroll', onScroll, { passive: true, once: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [open, closePopover]);
+
   const notesLost = visibleNotes.length - placed;
   const notesHidden = notes.length - visibleNotes.length;
 
@@ -308,9 +321,13 @@ export function Overlay({ pr }: Props) {
 
       {open && (
         <div
+          ref={popoverRef}
           style={{
-            position: 'absolute', top: `${open.top}px`, left: `${open.left}px`,
+            position: 'fixed', top: `${open.top}px`, left: `${open.left}px`,
             width: `${POPOVER_WIDTH}px`, zIndex: 2147483000,
+            // Long notes exceed any height estimate: cap and scroll rather
+            // than run off the bottom of the screen.
+            maxHeight: '78vh', overflowY: 'auto', borderRadius: '12px',
           }}
         >
           <NotePopover
