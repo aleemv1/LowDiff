@@ -8,7 +8,9 @@ import { STYLES } from './theme.js';
 const HOST_ID = 'lowdiff-root';
 const TAG = '[LowDiff]';
 
-console.info(TAG, 'content script loaded', window.location.pathname);
+declare const __LOWDIFF_BUILD__: string;
+
+console.info(TAG, 'build', __LOWDIFF_BUILD__, '·', window.location.pathname);
 
 /**
  * Candidate mount points for the summary card, newest markup first.

@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { copyFileSync, cpSync, mkdirSync } from 'node:fs';
-import { jsx } from './vite.shared.js';
+import { BUILD_ID, jsx } from './vite.shared.js';
 
 const root = import.meta.dirname;
 
 /** Extension pages. These are real documents, so chunking is fine here. */
 export default defineConfig({
   esbuild: jsx,
+  define: { __LOWDIFF_BUILD__: JSON.stringify(BUILD_ID) },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

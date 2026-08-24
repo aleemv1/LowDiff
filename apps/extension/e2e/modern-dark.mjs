@@ -85,8 +85,8 @@ if (!worker) {
 await worker.evaluate(async (apiKey) => {
   await chrome.storage.local.set({
     'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey }, defaultMode: 'review' },
-    'lowdiff:review:acme/demo#1@fixture:review': {
-      summary: 'The file is prefixed with a crypto wallet address, which makes the YAML invalid.',
+    'lowdiff:review:v2:acme/demo#1@fixture:review': {
+      summary: 'The file is prefixed with a crypto wallet address inside `python-package-conda.yml`, making the YAML invalid.',
       headSha: 'fixture',
       usage: { inputTokens: 0, outputTokens: 0 },
       storedAt: Date.now(),
@@ -154,6 +154,8 @@ const state = await page.evaluate(() => {
     badgeParentIsGutter: badges.map((b) => !b.parentElement?.hasAttribute('data-line-anchor')),
     badgeLines: badges.map((b) => b.parentElement?.getAttribute('data-line-number')),
     cardBackground: cardBg,
+    summaryChips: card ? card.querySelectorAll('code').length : 0,
+    summaryLiteralBackticks: (card?.textContent ?? '').includes('\u0060'),
     highlightedLines: lit.map((r) => r.querySelector('[data-line-number]')?.getAttribute('data-line-number')),
   };
 });

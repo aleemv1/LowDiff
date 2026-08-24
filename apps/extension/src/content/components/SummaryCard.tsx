@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import { C, KIND_STYLE } from '../theme.js';
+import { Markdown } from './Markdown.js';
 
 interface Props {
   summary: string;
@@ -120,10 +121,14 @@ export function SummaryCard(props: Props) {
             maxWidth: '900px',
           }}
         >
-          {props.busy && props.notes.length === 0 ? 'Reading the diff…' : props.summary}
+          {props.busy && props.notes.length === 0 ? (
+            'Reading the diff…'
+          ) : (
+            <Markdown text={props.summary} font="13px/1.65 inherit" />
+          )}
           {props.notes.length > 0 && (
-            <b style={{ color: C.accentDark }}>
-              {' '}Click the ✦ badges in the diff to see notes on specific lines.
+            <b style={{ color: C.accentDark, font: '600 12px/1.5 inherit' }}>
+              Click the ✦ badges in the diff to see notes on specific lines.
             </b>
           )}
           {props.cached && (

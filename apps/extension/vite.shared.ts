@@ -1,5 +1,8 @@
 import type { UserConfig } from 'vite';
 
+/** Stamped into the bundle so a stale, unreloaded extension is obvious. */
+export const BUILD_ID = process.env['LOWDIFF_BUILD'] ?? 'dev';
+
 export const jsx = { jsx: 'automatic', jsxImportSource: 'preact' } as const;
 
 /**
@@ -11,6 +14,7 @@ export const jsx = { jsx: 'automatic', jsxImportSource: 'preact' } as const;
 export function singleFile(entry: string, fileName: string, format: 'es' | 'iife'): UserConfig {
   return {
     esbuild: jsx,
+    define: { __LOWDIFF_BUILD__: JSON.stringify(BUILD_ID) },
     build: {
       outDir: 'dist',
       emptyOutDir: false,
