@@ -100,6 +100,13 @@ await worker.evaluate(async (apiKey) => {
         },
         {
           kind: 'RISK',
+          title: 'Workflow runs on every push to every branch',
+          body: 'An unrestricted `on: [push]` trigger runs this workflow for all branches.',
+          confidence: 'medium',
+          anchor: { path: '.github/workflows/python-package-conda.yml', side: 'RIGHT', line: 3, lineHash: 'z' },
+        },
+        {
+          kind: 'RISK',
           title: 'Depends on environment.yml that is not in this PR',
           body: 'The `conda env update` step reads `environment.yml`, which this PR does not add.',
           confidence: 'medium',
@@ -139,7 +146,7 @@ const state = await page.evaluate(() => {
     ? getComputedStyle(card.firstElementChild).backgroundColor
     : null;
 
-  badges[1]?.click();
+  badges.find((b) => b.parentElement?.getAttribute('data-line-number') === '4')?.click();
   const lit = [...document.querySelectorAll('[data-lowdiff-highlit]')];
 
   // The card must sit above the first file and inside the diff column, not
@@ -162,6 +169,26 @@ const state = await page.evaluate(() => {
     badgeParentIsGutter: badges.map((b) => !b.parentElement?.hasAttribute('data-line-anchor')),
     badgeLines: badges.map((b) => b.parentElement?.getAttribute('data-line-number')),
     cardBackground: cardBg,
+    countChips: [...(card?.querySelectorAll('.pill') ?? [])].map((p) => ({
+      tag: p.tagName,
+      text: p.textContent?.trim(),
+    })),
+    proseMaxWidth: (() => {
+      let el = card?.querySelector('p')?.parentElement ?? null;
+      while (el) {
+        const mw = getComputedStyle(el).maxWidth;
+        if (mw !== 'none') return mw;
+        el = el.parentElement;
+      }
+      return 'none';
+    })(),
+    hint: (() => {
+      const el = [...(card?.querySelectorAll('span, b') ?? [])].find((s) =>
+        (s.textContent ?? '').includes('badge'),
+      );
+      if (!el) return null;
+      return { tag: el.tagName, weight: getComputedStyle(el).fontWeight };
+    })(),
     summaryChips: card ? card.querySelectorAll('code').length : 0,
     summaryLiteralBackticks: (card?.textContent ?? '').includes('\u0060'),
     highlightedLines: lit.map((r) => r.querySelector('[data-line-number]')?.getAttribute('data-line-number')),
@@ -186,6 +213,28 @@ const popover = await page.evaluate(() => {
   };
 });
 
+// Chip → badge navigation: clicking a count jumps to that kind's next badge,
+// shown by the active glow; a second click cycles to the following one.
+const jump = await page.evaluate(() => {
+  const host = document.getElementById('lowdiff-root');
+  const chip = [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])].find((b) =>
+    /risk/.test(b.textContent ?? ''),
+  );
+  const activeLine = () =>
+    [...document.querySelectorAll('[data-lowdiff-badge]')]
+      .find(
+        (b) =>
+          b.firstElementChild instanceof HTMLElement &&
+          b.firstElementChild.style.transform.includes('scale'),
+      )
+      ?.parentElement?.getAttribute('data-line-number') ?? null;
+  chip?.click();
+  const first = activeLine();
+  chip?.click();
+  const second = activeLine();
+  return { chipFound: Boolean(chip), first, second };
+});
+
 // Toggle a kind off via settings, as the popup does, and confirm the overlay
 // reacts without any reload.
 await worker.evaluate(async () => {
@@ -205,7 +254,7 @@ const filtered = await page.evaluate(() => {
   };
 });
 
-console.log(JSON.stringify({ ...state, popover, filtered }, null, 2));
+console.log(JSON.stringify({ ...state, popover, jump, filtered }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 

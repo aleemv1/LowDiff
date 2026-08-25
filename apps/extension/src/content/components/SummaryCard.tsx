@@ -12,21 +12,25 @@ interface Props {
   busy: boolean;
   onMode: (mode: Mode) => void;
   onRefresh: () => void;
+  onJump: (kind: NoteKind) => void;
 }
 
-const LABEL: Partial<Record<NoteKind, string>> = {
-  RISK: '⚠ risk',
-  SECURITY: '🔒 security',
-  BREAKING: '⚡ breaking',
-  PERF: 'perf',
-  SUGGESTION: 'suggestion',
-  EXPLAIN: 'note',
+const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
+  RISK: { one: '⚠ risk', many: '⚠ risks' },
+  SECURITY: { one: '🔒 security', many: '🔒 security' },
+  BREAKING: { one: '⚡ breaking', many: '⚡ breaking' },
+  PERF: { one: 'perf', many: 'perf' },
+  SUGGESTION: { one: 'suggestion', many: 'suggestions' },
+  EXPLAIN: { one: 'note', many: 'notes' },
 };
+
+/** Chips read left to right from most to least severe. */
+const KIND_ORDER: NoteKind[] = ['SECURITY', 'RISK', 'BREAKING', 'PERF', 'SUGGESTION', 'EXPLAIN'];
 
 function counts(notes: Note[]): [NoteKind, number][] {
   const tally = new Map<NoteKind, number>();
   for (const note of notes) tally.set(note.kind, (tally.get(note.kind) ?? 0) + 1);
-  return [...tally.entries()];
+  return [...tally.entries()].sort((a, b) => KIND_ORDER.indexOf(a[0]) - KIND_ORDER.indexOf(b[0]));
 }
 
 export function SummaryCard(props: Props) {
@@ -63,13 +67,20 @@ export function SummaryCard(props: Props) {
 
         <span style={{ display: 'flex', gap: '6px', marginLeft: '8px', flexWrap: 'wrap' }}>
           {counts(props.notes).map(([kind, n]) => (
-            <span
+            <button
               key={kind}
               class="pill"
-              style={{ background: KIND_STYLE[kind]!.headBg, color: KIND_STYLE[kind]!.color }}
+              onClick={() => props.onJump(kind)}
+              title={`Jump to the next ${LABEL[kind]!.one} badge in the diff`}
+              style={{
+                background: KIND_STYLE[kind]!.headBg,
+                color: KIND_STYLE[kind]!.color,
+                border: '1px solid color-mix(in srgb, currentColor 40%, transparent)',
+                cursor: 'pointer',
+              }}
             >
-              {n} {LABEL[kind]}
-            </span>
+              {n} {n === 1 ? LABEL[kind]!.one : LABEL[kind]!.many} ↓
+            </button>
           ))}
           {props.notes.length === 0 && !props.busy && (
             <span class="pill" style={{ background: '#e9f8ec', color: '#1a7f37' }}>
@@ -121,19 +132,39 @@ export function SummaryCard(props: Props) {
             color: C.body,
           }}
         >
-          {props.busy && props.notes.length === 0 ? (
-            'Reading the diff…'
-          ) : (
-            <Markdown text={props.summary} font="13px/1.65 inherit" />
-          )}
-          {props.notes.length > 0 && (
-            <b style={{ color: C.accentDark, font: '600 12px/1.5 inherit' }}>
-              Click the ✦ badges in the diff to see notes on specific lines.
-            </b>
-          )}
-          {props.cached && (
-            <span style={{ color: C.faint, fontSize: '11px' }}> · cached for this commit</span>
-          )}
+          {/* A capped measure: the card spans the diff column, and on a wide
+              monitor full-width prose runs hundreds of characters per line. */}
+          <div style={{ maxWidth: '72ch' }}>
+            {props.busy && props.notes.length === 0 ? (
+              'Reading the diff…'
+            ) : (
+              <Markdown text={props.summary} font="13px/1.65 inherit" />
+            )}
+            {(props.notes.length > 0 || props.cached) && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'baseline', gap: '4px 12px',
+                  flexWrap: 'wrap', marginTop: '8px',
+                }}
+              >
+                {props.notes.length > 0 && (
+                  <span style={{ color: C.muted, font: '12px/1.5 inherit' }}>
+                    <span style={{ color: C.accentDark }}>✦</span>{' '}
+                    Click a count to jump, or any badge in the diff.
+                  </span>
+                )}
+                {props.cached && (
+                  <span
+                    style={{
+                      marginLeft: 'auto', color: C.faint, fontSize: '11px', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    cached for this commit
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

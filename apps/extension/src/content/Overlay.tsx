@@ -137,6 +137,21 @@ export function Overlay({ pr, overlayRoot }: Props) {
     setOpen(null);
   }, []);
 
+  /** Cycle through the placed badges of one kind, glowing each in turn. */
+  const jumpAt = useRef<Partial<Record<NoteKind, number>>>({});
+  const jump = useCallback((kind: NoteKind) => {
+    const badges = [
+      ...document.querySelectorAll<HTMLElement>(
+        `[data-lowdiff-badge][data-lowdiff-kind="${kind}"]`,
+      ),
+    ];
+    if (badges.length === 0) return;
+    const at = ((jumpAt.current[kind] ?? -1) + 1) % badges.length;
+    jumpAt.current[kind] = at;
+    badges[at]!.scrollIntoView({ block: 'center' });
+    setActiveBadge(badges[at]!);
+  }, []);
+
   /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {
     if (visibleNotes.length === 0) {
@@ -386,6 +401,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
           void run(next, false);
         }}
         onRefresh={() => void run(mode, true)}
+        onJump={jump}
       />
 
       {notesHidden > 0 && !busy && (

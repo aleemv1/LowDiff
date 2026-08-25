@@ -36,7 +36,9 @@ export const KIND_STYLE: Record<string, { color: string; headBg: string }> = {
   SECURITY: { color: 'var(--ld-danger-fg)', headBg: 'var(--ld-danger-bg)' },
   BREAKING: { color: 'var(--ld-warn-fg)', headBg: 'var(--ld-warn-bg)' },
   PERF: { color: 'var(--ld-info-fg)', headBg: 'var(--ld-info-bg)' },
-  EXPLAIN: { color: 'var(--ld-fg-muted)', headBg: 'var(--ld-surface-muted)' },
+  // Not --ld-surface-muted: on GitHub's dark themes that resolves to almost
+  // the card surface, leaving the "note" chip invisible next to coloured ones.
+  EXPLAIN: { color: 'var(--ld-fg-muted)', headBg: 'var(--ld-note-bg)' },
   SUGGESTION: { color: 'var(--ld-ok-fg)', headBg: 'var(--ld-ok-bg)' },
 };
 
@@ -65,6 +67,8 @@ export const STYLES = `
   --ld-info-bg: var(--bgColor-accent-muted, #eaf4ff);
   --ld-ok-fg: var(--fgColor-success, #1a7f37);
   --ld-ok-bg: var(--bgColor-success-muted, #e9f8ec);
+  /* Mid-gray at low alpha reads as a tint on light and dark alike. */
+  --ld-note-bg: rgba(139,148,158,.16);
 
   --ld-add-bg: var(--diffBlob-additionNum-bgColor, #aceebb);
   --ld-del-bg: var(--diffBlob-deletionNum-bgColor, #ffcecb);
