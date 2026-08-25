@@ -30,23 +30,42 @@ await page.waitForSelector('input');
 
 const state = await page.evaluate(() => {
   const input = document.querySelector('input');
-  const save = [...document.querySelectorAll('button')].find((b) => b.textContent === 'Save');
+  const active = [...document.querySelectorAll('button')].find((b) => b.textContent === 'Anthropic');
   const inputStyle = input ? getComputedStyle(input) : null;
-  const saveStyle = save ? getComputedStyle(save) : null;
   return {
     inputBorderStyle: inputStyle?.borderTopStyle ?? null,
     inputBorderColor: inputStyle?.borderTopColor ?? null,
-    saveBackground: saveStyle?.backgroundColor ?? null,
-    saveTextColor: saveStyle?.color ?? null,
+    // The selected provider borders in the accent — proof the tokens resolve.
+    activeProviderBorder: active ? getComputedStyle(active).borderTopColor : null,
+  };
+});
+
+// The guided landing: pitch and steps beside the essentials, the optional
+// fields folded away, and changes persisting without a Save button.
+const landing = await page.evaluate(() => ({
+  hasSteps: (document.body.textContent ?? '').includes('Open any pull request'),
+  advancedCollapsed: ![...document.querySelectorAll('input')].some(
+    (i) => i.placeholder.startsWith('Needed for private repos') && i.checkVisibility(),
+  ),
+  hasSaveButton: [...document.querySelectorAll('button')].some((b) => b.textContent === 'Save'),
+}));
+
+// Typing a key must save on its own and say so.
+await page.fill('input[type="password"]', 'sk-test-autosave');
+await page.waitForTimeout(1100);
+const autosave = await page.evaluate(async () => {
+  const stored = await chrome.storage.local.get('lowdiff:settings');
+  return {
+    persistedKey: stored['lowdiff:settings']?.keys?.anthropic ?? null,
+    toastShown: (document.body.textContent ?? '').includes('Saved'),
   };
 });
 
 const pass = {
   inputHasBorder: state.inputBorderStyle === 'solid',
-  saveIsVisible:
-    Boolean(state.saveBackground) &&
-    state.saveBackground !== 'rgba(0, 0, 0, 0)' &&
-    state.saveBackground !== state.saveTextColor,
+  tokensResolve: state.activeProviderBorder === 'rgb(91, 91, 214)',
+  guidedLanding: landing.hasSteps && landing.advancedCollapsed && !landing.hasSaveButton,
+  autosave: autosave.persistedKey === 'sk-test-autosave' && autosave.toastShown,
 };
 
 const shotAt = process.argv.indexOf('--shot');
@@ -55,8 +74,8 @@ if (shotAt !== -1) {
   console.log(`screenshot → ${process.argv[shotAt + 1]}`);
 }
 
-console.log(JSON.stringify({ ...state, pass }, null, 2));
-if (!pass.inputHasBorder || !pass.saveIsVisible) process.exitCode = 1;
+console.log(JSON.stringify({ ...state, landing, autosave, pass }, null, 2));
+if (Object.values(pass).some((p) => !p)) process.exitCode = 1;
 
 await context.close();
 rmSync(profile, { recursive: true, force: true });

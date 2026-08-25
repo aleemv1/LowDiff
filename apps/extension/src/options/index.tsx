@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
 import type { Mode } from '@lowdiff/core';
@@ -15,6 +15,18 @@ import { C, STYLES } from '../content/theme.js';
 const tokens = document.createElement('style');
 tokens.textContent = STYLES.replaceAll(':host', ':root');
 document.head.append(tokens);
+
+// This page opens on install, so it is the landing: pitch beside the form,
+// stacking on narrow windows.
+const layout = document.createElement('style');
+layout.textContent = `
+  .opt-grid {
+    display: grid; grid-template-columns: 380px 460px; gap: 40px;
+    justify-content: center; align-items: start; padding: 48px 24px 80px;
+  }
+  @media (max-width: 940px) { .opt-grid { grid-template-columns: minmax(0, 520px); } }
+`;
+document.head.append(layout);
 
 const PROVIDERS: { id: ProviderId; label: string; keyUrl: string; note: string }[] = [
   {
@@ -37,22 +49,39 @@ const PROVIDERS: { id: ProviderId; label: string; keyUrl: string; note: string }
   },
 ];
 
+const STEPS: { title: string; detail: string }[] = [
+  { title: 'Pick a provider', detail: 'Anthropic, OpenAI, or Google' },
+  { title: 'Paste an API key', detail: 'Created in your provider console — one click away' },
+  { title: 'Open any pull request', detail: 'The review card and ✦ badges appear on the diff' },
+];
+
 function Options() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const saveTimer = useRef<number | undefined>(undefined);
+  const toastTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
   }, []);
 
+  // Persist shortly after the last change. A Save button is one more thing
+  // standing between install and a working review — and, forgotten, it
+  // silently discards everything typed.
   const update = (patch: Partial<Settings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }));
-    setSaved(false);
-  };
-
-  const save = async () => {
-    await saveSettings(settings);
-    setSaved(true);
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => {
+        void saveSettings(next).then(() => {
+          setSaved(true);
+          clearTimeout(toastTimer.current);
+          toastTimer.current = window.setTimeout(() => setSaved(false), 1800);
+        });
+      }, 500);
+      return next;
+    });
   };
 
   const active = PROVIDERS.find((p) => p.id === settings.provider)!;
@@ -66,42 +95,75 @@ function Options() {
     display: 'block', font: `700 11px 'DM Sans',sans-serif`,
     color: C.muted, margin: '18px 0 6px', letterSpacing: '.03em',
   };
+  const help = { font: `11.5px/1.55 'DM Sans',sans-serif`, color: C.faint, margin: '7px 0 0' };
+  const segButton = (on: boolean) => ({
+    flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
+    font: `600 12px 'DM Sans',sans-serif`,
+    border: `1px solid ${on ? C.accent : C.line}`,
+    background: on ? C.accentTint : '#fff',
+    color: on ? C.accentDark : C.muted,
+  });
 
   return (
-    <div style={{ maxWidth: '620px', margin: '32px auto', padding: '0 20px 60px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-        <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
+    <div class="opt-grid">
+      {saved && (
+        <span
+          style={{
+            position: 'fixed', top: '18px', right: '22px', background: '#e9f8ec',
+            color: '#1a7f37', borderRadius: '999px', padding: '5px 12px',
+            font: `600 11.5px 'DM Sans',sans-serif`,
+          }}
+        >
+          ✓ Saved
+        </span>
+      )}
+
+      <div>
+        <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
           ✦
         </span>
-        <h1 style={{ font: `700 20px 'DM Sans',sans-serif`, color: C.ink, margin: 0 }}>LowDiff</h1>
+        <h1 style={{ font: `700 26px/1.25 'DM Sans',sans-serif`, color: C.ink, margin: '12px 0 8px' }}>
+          Review annotations,
+          <br />
+          on the diff itself.
+        </h1>
+        <p style={{ font: `14px/1.6 'DM Sans',sans-serif`, color: C.muted, margin: '0 0 22px' }}>
+          LowDiff layers AI findings over GitHub pull requests. Keys stay in this browser and
+          are sent only to the provider you pick.
+        </p>
+        {STEPS.map((step, i) => (
+          <div key={step.title} style={{ display: 'flex', gap: '12px', margin: '14px 0' }}>
+            <b
+              style={{
+                width: '22px', height: '22px', borderRadius: '50%', flex: 'none',
+                background: C.accentTint, color: C.accentDark,
+                font: `700 11px 'DM Sans',sans-serif`,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                transform: 'translateY(1px)',
+              }}
+            >
+              {i + 1}
+            </b>
+            <div style={{ font: `13px/1.5 'DM Sans',sans-serif`, color: C.ink }}>
+              {step.title}
+              <span style={{ display: 'block', color: C.faint, fontSize: '11.5px' }}>
+                {step.detail}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
-      <p style={{ font: `13px/1.6 'DM Sans',sans-serif`, color: C.muted, margin: '0 0 8px' }}>
-        AI review annotations on GitHub pull requests. Your keys stay in this browser and are
-        sent only to the provider you pick.
-      </p>
 
-      <div style={{ background: '#fff', borderRadius: '12px', border: `1px solid ${C.line}`, padding: '4px 22px 24px' }}>
+      <div style={{ background: '#fff', borderRadius: '12px', border: `1px solid ${C.line}`, padding: '6px 22px 20px' }}>
         <label style={label}>MODEL PROVIDER</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {PROVIDERS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => update({ provider: p.id })}
-              style={{
-                flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
-                font: `600 12px 'DM Sans',sans-serif`,
-                border: `1px solid ${settings.provider === p.id ? C.accent : C.line}`,
-                background: settings.provider === p.id ? C.accentTint : '#fff',
-                color: settings.provider === p.id ? C.accentDark : C.muted,
-              }}
-            >
+            <button key={p.id} onClick={() => update({ provider: p.id })} style={segButton(settings.provider === p.id)}>
               {p.label}
             </button>
           ))}
         </div>
-        <p style={{ font: `11.5px/1.55 'DM Sans',sans-serif`, color: C.faint, margin: '8px 0 0' }}>
-          {active.note}
-        </p>
+        <p style={help}>{active.note}</p>
 
         <label style={label}>{active.label.toUpperCase()} API KEY</label>
         <input
@@ -124,73 +186,62 @@ function Options() {
           Create a key on {active.label} ↗
         </a>
 
-        <label style={label}>MODEL (OPTIONAL)</label>
-        <input
-          value={settings.model ?? ''}
-          placeholder={DEFAULT_MODELS[settings.provider]}
-          onInput={(e) => update({ model: (e.target as HTMLInputElement).value || undefined })}
-          style={field}
-        />
-
-        <label style={label}>GITHUB TOKEN (OPTIONAL)</label>
-        <input
-          type="password"
-          value={settings.githubToken ?? ''}
-          placeholder="Needed for private repos and a higher rate limit"
-          onInput={(e) => update({ githubToken: (e.target as HTMLInputElement).value || undefined })}
-          style={field}
-        />
-        <p style={{ font: `11.5px/1.55 'DM Sans',sans-serif`, color: C.faint, margin: '7px 0 0' }}>
-          Fine-grained token, read-only on Contents, Pull requests, and Metadata. Without one,
-          public repos work at 60 requests/hour instead of 5,000.
-        </p>
-
-        <label style={label}>DAEMON TOKEN (OPTIONAL)</label>
-        <input
-          type="password"
-          value={settings.daemonToken ?? ''}
-          placeholder="Lets chat search your local repos"
-          onInput={(e) => update({ daemonToken: (e.target as HTMLInputElement).value || undefined })}
-          style={field}
-        />
-        <p style={{ font: `11.5px/1.55 'DM Sans',sans-serif`, color: C.faint, margin: '7px 0 0' }}>
-          Run <code>npm run daemon</code> in the LowDiff repo and paste the token it prints.
-          Without it, chat sees only the pull request.
-        </p>
-
         <label style={label}>DEFAULT MODE</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['review', 'explain'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => update({ defaultMode: m })}
-              style={{
-                flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
-                font: `600 12px 'DM Sans',sans-serif`,
-                border: `1px solid ${settings.defaultMode === m ? C.accent : C.line}`,
-                background: settings.defaultMode === m ? C.accentTint : '#fff',
-                color: settings.defaultMode === m ? C.accentDark : C.muted,
-              }}
-            >
+            <button key={m} onClick={() => update({ defaultMode: m })} style={segButton(settings.defaultMode === m)}>
               {m === 'review' ? 'Review — problems only' : 'Explain — narrate the change'}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '24px' }}>
-          <button
-            onClick={() => void save()}
-            style={{
-              background: C.accent, color: '#fff', border: 'none', borderRadius: '999px',
-              padding: '9px 22px', font: `600 12.5px 'DM Sans',sans-serif`, cursor: 'pointer',
-            }}
-          >
-            Save
-          </button>
-          {saved && (
-            <span style={{ font: `600 12px 'DM Sans',sans-serif`, color: '#1a7f37' }}>Saved</span>
-          )}
+        <div
+          onClick={() => setAdvanced(!advanced)}
+          style={{
+            marginTop: '20px', borderTop: `1px dashed ${C.line}`, paddingTop: '12px',
+            font: `600 12px 'DM Sans',sans-serif`, color: C.muted, cursor: 'pointer',
+          }}
+        >
+          {advanced ? '▾' : '▸'} Advanced — model override, GitHub token, local repo search
         </div>
+
+        {advanced && (
+          <div>
+            <label style={label}>MODEL (OPTIONAL)</label>
+            <input
+              value={settings.model ?? ''}
+              placeholder={DEFAULT_MODELS[settings.provider]}
+              onInput={(e) => update({ model: (e.target as HTMLInputElement).value || undefined })}
+              style={field}
+            />
+
+            <label style={label}>GITHUB TOKEN (OPTIONAL)</label>
+            <input
+              type="password"
+              value={settings.githubToken ?? ''}
+              placeholder="Needed for private repos and a higher rate limit"
+              onInput={(e) => update({ githubToken: (e.target as HTMLInputElement).value || undefined })}
+              style={field}
+            />
+            <p style={help}>
+              Fine-grained token, read-only on Contents, Pull requests, and Metadata. Without
+              one, public repos work at 60 requests/hour instead of 5,000.
+            </p>
+
+            <label style={label}>DAEMON TOKEN (OPTIONAL)</label>
+            <input
+              type="password"
+              value={settings.daemonToken ?? ''}
+              placeholder="Lets chat search your local repos"
+              onInput={(e) => update({ daemonToken: (e.target as HTMLInputElement).value || undefined })}
+              style={field}
+            />
+            <p style={help}>
+              Run <code>npm run daemon</code> in the LowDiff repo and paste the token it prints.
+              Without it, chat sees only the pull request.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
