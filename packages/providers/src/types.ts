@@ -1,4 +1,4 @@
-import type { FileDiff, Mode, Note, PrRef } from '@lowdiff/core';
+import type { FileDiff, Note, PrRef } from '@lowdiff/core';
 
 export type ProviderId = 'anthropic' | 'openai' | 'google';
 
@@ -22,7 +22,6 @@ export interface ProviderConfig {
 }
 
 export interface AnnotateRequest {
-  mode: Mode;
   pr: PrRef;
   title: string;
   body: string;

@@ -46,7 +46,7 @@ export class AnthropicClient implements LlmClient {
         system: [
           {
             type: 'text',
-            text: systemPrompt(req.mode),
+            text: systemPrompt(),
             cache_control: { type: 'ephemeral' },
           },
         ],
@@ -54,7 +54,7 @@ export class AnthropicClient implements LlmClient {
           { role: 'user', content: userPrompt(req.files, req.title, req.body) },
         ],
         output_config: {
-          format: { type: 'json_schema', schema: toAnthropicJsonSchema(noteSchema(req.mode)) },
+          format: { type: 'json_schema', schema: toAnthropicJsonSchema(noteSchema()) },
         },
       },
       req.signal ? { signal: req.signal } : {},
@@ -65,7 +65,7 @@ export class AnthropicClient implements LlmClient {
       .map((block) => block.text)
       .join('');
 
-    const parsed = parseResponse(JSON.parse(text), req.mode);
+    const parsed = parseResponse(JSON.parse(text));
     return {
       summary: parsed.summary,
       notes: parsed.notes,

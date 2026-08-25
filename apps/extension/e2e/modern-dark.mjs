@@ -85,7 +85,7 @@ if (!worker) {
 await worker.evaluate(async (apiKey) => {
   await chrome.storage.local.set({
     'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey }, defaultMode: 'review' },
-    'lowdiff:review:v6:acme/demo#1@fixture:review': {
+    'lowdiff:review:v7:acme/demo#1@fixture': {
       summary: 'The file is prefixed with a crypto wallet address inside `python-package-conda.yml`, making the YAML invalid.',
       headSha: 'fixture',
       usage: { inputTokens: 0, outputTokens: 0 },
@@ -97,6 +97,13 @@ await worker.evaluate(async (apiKey) => {
           body: 'Line 1 is a payment amount, not YAML. Treat the PR as untrusted.\n\n```yaml\nname: Python Package using Conda\non: [push]\n```',
           confidence: 'high',
           anchor: { path: '.github/workflows/python-package-conda.yml', side: 'RIGHT', line: 1, endLine: 2, lineHash: 'x' },
+        },
+        {
+          kind: 'SUGGESTION',
+          title: 'Cache the conda environment between runs',
+          body: 'Each run rebuilds the environment from scratch; a cache key on `environment.yml` avoids that.',
+          confidence: 'medium',
+          anchor: { path: '.github/workflows/python-package-conda.yml', side: 'RIGHT', line: 2, lineHash: 'w' },
         },
         {
           kind: 'RISK',
@@ -243,6 +250,23 @@ const jump = await page.evaluate(async () => {
   return { chipFound: Boolean(chip), glowBefore, glowAfter, first, second };
 });
 
+// One scan, two views: the default Review view hides the seeded SUGGESTION;
+// switching to Explain reveals it instantly — a lens change, not a re-scan.
+const explainView = await page.evaluate(async () => {
+  const host = document.getElementById('lowdiff-root');
+  const explain = [...(host?.shadowRoot?.querySelectorAll('button') ?? [])].find(
+    (b) => b.textContent === 'Explain',
+  );
+  explain?.click();
+  await new Promise((r) => setTimeout(r, 900));
+  return {
+    badges: document.querySelectorAll('[data-lowdiff-badge]').length,
+    chips: [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])].map((b) =>
+      b.textContent?.trim(),
+    ),
+  };
+});
+
 // Toggle a kind off via settings, as the popup does, and confirm the overlay
 // reacts without any reload.
 await worker.evaluate(async () => {
@@ -262,7 +286,7 @@ const filtered = await page.evaluate(() => {
   };
 });
 
-console.log(JSON.stringify({ ...state, popover, jump, filtered }, null, 2));
+console.log(JSON.stringify({ ...state, popover, jump, explainView, filtered }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 

@@ -27,26 +27,23 @@ describe('renderDiff', () => {
 });
 
 describe('systemPrompt', () => {
-  it('tells review mode that zero notes is a valid outcome', () => {
-    expect(systemPrompt('review')).toMatch(/zero notes/);
-  });
-
-  it('restricts review mode to the three problem kinds', () => {
-    const p = systemPrompt('review');
+  it('covers problems and explanation in one pass', () => {
+    const p = systemPrompt();
     expect(p).toContain('RISK:');
-    expect(p).not.toContain('SUGGESTION:');
-  });
-
-  it('offers all six kinds in explain mode', () => {
-    const p = systemPrompt('explain');
     expect(p).toContain('EXPLAIN:');
     expect(p).toContain('SUGGESTION:');
   });
 
-  it('forbids citing unseen lines in both modes', () => {
-    for (const mode of ['review', 'explain'] as const) {
-      expect(systemPrompt(mode)).toMatch(/Never cite a line you were not shown/);
-    }
+  it('keeps the problems-only bar: none found is a valid outcome', () => {
+    expect(systemPrompt()).toMatch(/that is correct/);
+  });
+
+  it('still prices a false alarm above a missed nit', () => {
+    expect(systemPrompt()).toMatch(/false alarm costs more/);
+  });
+
+  it('forbids citing unseen lines', () => {
+    expect(systemPrompt()).toMatch(/Never cite a line you were not shown/);
   });
 });
 

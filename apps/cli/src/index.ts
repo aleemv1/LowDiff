@@ -8,7 +8,7 @@
  *   lowdiff <pr-url> --chat "why 300ms?"
  */
 import { readFileSync } from 'node:fs';
-import { anchorNotes } from '@lowdiff/core';
+import { anchorNotes, REVIEW_KINDS } from '@lowdiff/core';
 import type { Mode } from '@lowdiff/core';
 import { DaemonClient, GitHubContextProvider, parsePrUrl } from '@lowdiff/context';
 import { createLlmClient } from '@lowdiff/providers';
@@ -89,13 +89,12 @@ async function main(): Promise<void> {
   const lines = withDiff.reduce((n, f) => n + f.hunks.reduce((m, h) => m + h.lines.length, 0), 0);
 
   process.stderr.write(
-    `${DIM}${withDiff.length} files, ${lines} diff lines — running ${provider} in ${mode} mode…${OFF}\n\n`,
+    `${DIM}${withDiff.length} files, ${lines} diff lines — running ${provider}…${OFF}\n\n`,
   );
 
   const llm = createLlmClient({ provider, auth: { kind: 'apiKey', key } });
   const started = Date.now();
   const result = await llm.annotate({
-    mode,
     pr: { ...location, headSha: meta.headSha },
     title: meta.title,
     body: meta.body,
@@ -103,8 +102,12 @@ async function main(): Promise<void> {
   });
   const elapsed = ((Date.now() - started) / 1000).toFixed(1);
 
-  const grounded = anchorNotes(result.notes, withDiff);
-  const dropped = result.notes.length - grounded.length;
+  const anchored = anchorNotes(result.notes, withDiff);
+  // One scan carries every kind; --mode review filters to problems, exactly
+  // like the extension's toggle.
+  const grounded =
+    mode === 'review' ? anchored.filter((n) => REVIEW_KINDS.includes(n.kind)) : anchored;
+  const dropped = result.notes.length - anchored.length;
 
   console.log(`${BOLD}${meta.title}${OFF}  ${DIM}${url}${OFF}\n`);
   console.log(result.summary + '\n');

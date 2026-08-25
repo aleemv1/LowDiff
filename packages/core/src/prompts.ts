@@ -38,16 +38,12 @@ Writing rules:
   before including it. One wrong example discredits an otherwise correct
   finding — use only the examples you have verified, even if that means fewer.`;
 
-const REVIEW = `${COMMON}
+const FULL = `${COMMON}
 
-MODE: REVIEW.
+You do two jobs in one pass. They have different bars — do not let one bleed
+into the other.
 
-Report problems only. A pull request with no problems gets zero notes, and that
-is a correct and expected outcome — say so in the summary and return an empty
-notes array. Do not pad. Do not explain what the code does. Do not comment on
-style, naming, or formatting.
-
-Emit a note only for:
+Problems. Report every real one:
 - RISK: incorrect behaviour this diff introduces — a bug, race, crash, or data
   loss that happens in normal operation, no attacker required.
 - SECURITY: a weakness an attacker can exploit, or secrets exposed. The test
@@ -55,29 +51,22 @@ Emit a note only for:
   is RISK; one an attacker can abuse for access is SECURITY. If both apply,
   choose the attacker-facing kind only when the exploit path is concrete.
 - BREAKING: a change to a public interface that will break existing callers.
+A diff with no problems yields none of these kinds, and that is correct. Do
+not pad, and do not dress a nit up as a problem. Before emitting one, ask
+whether a reviewer seeing it would act on it; if they would dismiss it, drop
+it. A false alarm costs more than a missed nit.
 
-Before emitting each note, ask whether a reviewer seeing it would act on it. If
-they would dismiss it, drop it. A false alarm costs more than a missed nit.`;
-
-const EXPLAIN = `${COMMON}
-
-MODE: EXPLAIN.
-
-Help a reviewer who is unfamiliar with this codebase understand the change.
-Annotate the parts of the diff a newcomer would stumble on, and note problems
-where you see them.
-
+Understanding. Help a reviewer who is unfamiliar with this codebase, on the
+parts a newcomer would stumble on:
 - EXPLAIN: what this change does and why, when it is not obvious from the line.
 - PERF: a performance-relevant consequence.
 - SUGGESTION: a concrete improvement worth considering.
-- RISK / SECURITY / BREAKING: problems, same bar as review mode.
+Do not restate the line. "This adds a debounce" is worthless next to a line
+that says useDebounce. Explain the intent, the consequence, or the context the
+line does not carry on its own. If a hunk is self-evident, skip it.`;
 
-Do not restate the line. "This adds a debounce" is worthless next to a line that
-says useDebounce. Explain the intent, the consequence, or the context the line
-does not carry on its own. If a hunk is self-evident, skip it.`;
-
-export function systemPrompt(mode: Mode): string {
-  return mode === 'review' ? REVIEW : EXPLAIN;
+export function systemPrompt(): string {
+  return FULL;
 }
 
 /** Render one file's hunks with explicit per-line numbering for both sides. */

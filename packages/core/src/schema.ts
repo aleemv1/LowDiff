@@ -12,8 +12,8 @@ export const BODY_MAX = 600;
  * "does provider X hold the contract" is one test run three times rather than
  * three prompts to tune separately.
  */
-export function noteSchema(mode: Mode): Record<string, unknown> {
-  const kinds = mode === 'review' ? REVIEW_KINDS : EXPLAIN_KINDS;
+export function noteSchema(): Record<string, unknown> {
+  const kinds = EXPLAIN_KINDS;
   return {
     type: 'object',
     additionalProperties: false,
@@ -27,7 +27,7 @@ export function noteSchema(mode: Mode): Record<string, unknown> {
       },
       notes: {
         type: 'array',
-        maxItems: mode === 'review' ? 8 : 30,
+        maxItems: 30,
         items: {
           type: 'object',
           additionalProperties: false,
@@ -96,7 +96,7 @@ function isRawNote(value: unknown, kinds: readonly NoteKind[]): value is RawNote
  * equally well, and a malformed note must never reach the overlay. Individual
  * bad notes are dropped; a response with no usable shape at all throws.
  */
-export function parseResponse(value: unknown, mode: Mode): ParsedResponse {
+export function parseResponse(value: unknown): ParsedResponse {
   if (typeof value !== 'object' || value === null) {
     throw new Error('model response was not an object');
   }
@@ -105,7 +105,7 @@ export function parseResponse(value: unknown, mode: Mode): ParsedResponse {
     throw new Error('model response is missing a summary');
   }
   const rawNotes = Array.isArray(root['notes']) ? root['notes'] : [];
-  const kinds = mode === 'review' ? REVIEW_KINDS : EXPLAIN_KINDS;
+  const kinds = EXPLAIN_KINDS;
 
   return {
     summary: root['summary'],

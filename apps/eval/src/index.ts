@@ -109,7 +109,6 @@ async function main(): Promise<void> {
       CASES.map(async (c): Promise<Result> => {
         const files = toFiles(c);
         const out = await llm.annotate({
-          mode: 'review',
           pr: { owner: 'eval', repo: 'cases', number: 1, headSha: c.id },
           title: c.title,
           body: c.body,

@@ -11,7 +11,6 @@ import type {
 } from '../shared/messages.js';
 import { loadSettings, toPublicSettings } from './storage.js';
 import { readCache, writeCache } from './cache.js';
-import type { Mode } from '@lowdiff/core';
 
 /**
  * The service worker is the only place credentials exist.
@@ -45,9 +44,9 @@ async function handle(
       return { ok: true, settings: toPublicSettings(settings) };
     }
     case 'ANNOTATE':
-      return annotate(message.pr, message.mode, message.refresh ?? false);
+      return annotate(message.pr, message.refresh ?? false);
     case 'CHAT':
-      await chat(message.pr, message.question, message.history, message.port, message.mode);
+      await chat(message.pr, message.question, message.history, message.port);
       return { ok: true };
     case 'ADD_REPO': {
       const settings = await loadSettings();
@@ -69,7 +68,7 @@ async function handle(
   }
 }
 
-async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<AnnotateReply> {
+async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply> {
   const settings = await loadSettings();
   const key = settings.keys[settings.provider];
   if (!key) {
@@ -86,7 +85,7 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
   const ref = { ...pr, headSha: meta.headSha };
 
   if (!refresh) {
-    const cached = await readCache(pr.owner, pr.repo, pr.number, meta.headSha, mode);
+    const cached = await readCache(pr.owner, pr.repo, pr.number, meta.headSha);
     if (cached) {
       return {
         ok: true,
@@ -111,7 +110,6 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
   });
 
   const result = await llm.annotate({
-    mode,
     pr: ref,
     title: meta.title,
     body: meta.body,
@@ -121,7 +119,7 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
   // Ground the model's claims against the diff it was actually shown.
   const notes = anchorNotes(result.notes, files);
 
-  await writeCache(pr.owner, pr.repo, pr.number, meta.headSha, mode, {
+  await writeCache(pr.owner, pr.repo, pr.number, meta.headSha, {
     summary: result.summary,
     notes,
     headSha: meta.headSha,
@@ -138,16 +136,11 @@ async function annotate(pr: PrLocation, mode: Mode, refresh: boolean): Promise<A
   };
 }
 
-function otherMode(mode: Mode): Mode {
-  return mode === 'review' ? 'explain' : 'review';
-}
-
 async function chat(
   pr: PrLocation,
   question: string,
   history: ChatTurn[],
   portName: string,
-  mode: Mode,
 ): Promise<void> {
   const settings = await loadSettings();
   const key = settings.keys[settings.provider];
@@ -162,9 +155,7 @@ async function chat(
   // Hand chat the review the user is looking at. Without it, "Ask about this"
   // asks about a finding the model cannot see, and it re-derives an answer
   // that may not match the note on screen.
-  const review =
-    (await readCache(pr.owner, pr.repo, pr.number, meta.headSha, mode)) ??
-    (await readCache(pr.owner, pr.repo, pr.number, meta.headSha, otherMode(mode)));
+  const review = await readCache(pr.owner, pr.repo, pr.number, meta.headSha);
 
   const llm = createLlmClient({
     provider: settings.provider,

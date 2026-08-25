@@ -12,75 +12,65 @@ const good = {
 };
 
 describe('noteSchema', () => {
-  it('restricts review mode to the three problem kinds', () => {
-    const s = noteSchema('review') as any;
-    expect(s.properties.notes.items.properties.kind.enum).toEqual([
-      'RISK',
-      'SECURITY',
-      'BREAKING',
-    ]);
-  });
-
-  it('allows all six kinds in explain mode', () => {
-    const s = noteSchema('explain') as any;
+  it('offers all six kinds — one scan covers problems and explanation', () => {
+    const s = noteSchema() as any;
     expect(s.properties.notes.items.properties.kind.enum).toHaveLength(6);
+    expect(s.properties.notes.items.properties.kind.enum).toContain('RISK');
+    expect(s.properties.notes.items.properties.kind.enum).toContain('EXPLAIN');
   });
 
-  it('caps review mode harder than explain mode', () => {
-    const review = noteSchema('review') as any;
-    const explain = noteSchema('explain') as any;
-    expect(review.properties.notes.maxItems).toBeLessThan(
-      explain.properties.notes.maxItems,
-    );
+  it('caps the note count', () => {
+    const s = noteSchema() as any;
+    expect(s.properties.notes.maxItems).toBe(30);
   });
 });
 
 describe('parseResponse', () => {
   it('keeps a well-formed note', () => {
-    const r = parseResponse({ summary: 's', notes: [good] }, 'review');
+    const r = parseResponse({ summary: 's', notes: [good] });
     expect(r.notes).toHaveLength(1);
     expect(r.summary).toBe('s');
   });
 
-  it('drops a note whose kind is not allowed in this mode', () => {
-    const r = parseResponse({ summary: 's', notes: [{ ...good, kind: 'EXPLAIN' }] }, 'review');
-    expect(r.notes).toEqual([]);
-  });
-
-  it('accepts that same note in explain mode', () => {
-    const r = parseResponse({ summary: 's', notes: [{ ...good, kind: 'EXPLAIN' }] }, 'explain');
+  it('keeps every known kind', () => {
+    const r = parseResponse({ summary: 's', notes: [{ ...good, kind: 'EXPLAIN' }] });
     expect(r.notes).toHaveLength(1);
   });
 
+  it('drops a note whose kind is unknown', () => {
+    const r = parseResponse({ summary: 's', notes: [{ ...good, kind: 'BANANA' }] });
+    expect(r.notes).toEqual([]);
+  });
+
   it('drops an over-long title rather than truncating it', () => {
-    const r = parseResponse({ summary: 's', notes: [{ ...good, title: 'x'.repeat(61) }] }, 'review');
+    const r = parseResponse({ summary: 's', notes: [{ ...good, title: 'x'.repeat(61) }] });
     expect(r.notes).toEqual([]);
   });
 
   it('drops a note with a non-integer line', () => {
-    const r = parseResponse({ summary: 's', notes: [{ ...good, line: 2.5 }] }, 'review');
+    const r = parseResponse({ summary: 's', notes: [{ ...good, line: 2.5 }] });
     expect(r.notes).toEqual([]);
   });
 
   it('drops a note missing required fields', () => {
-    const r = parseResponse({ summary: 's', notes: [{ kind: 'RISK' }] }, 'review');
+    const r = parseResponse({ summary: 's', notes: [{ kind: 'RISK' }] });
     expect(r.notes).toEqual([]);
   });
 
   it('keeps good notes alongside bad ones', () => {
-    const r = parseResponse({ summary: 's', notes: [{ kind: 'RISK' }, good] }, 'review');
+    const r = parseResponse({ summary: 's', notes: [{ kind: 'RISK' }, good] });
     expect(r.notes).toHaveLength(1);
   });
 
   it('tolerates a response with no notes array', () => {
-    expect(parseResponse({ summary: 's' }, 'review').notes).toEqual([]);
+    expect(parseResponse({ summary: 's' }).notes).toEqual([]);
   });
 
   it('throws when there is no summary', () => {
-    expect(() => parseResponse({ notes: [] }, 'review')).toThrow(/summary/);
+    expect(() => parseResponse({ notes: [] })).toThrow(/summary/);
   });
 
   it('throws on a non-object response', () => {
-    expect(() => parseResponse('nope', 'review')).toThrow();
+    expect(() => parseResponse('nope')).toThrow();
   });
 });

@@ -1,4 +1,4 @@
-import type { Mode, Note } from '@lowdiff/core';
+import type { Note } from '@lowdiff/core';
 
 export interface CachedReview {
   summary: string;
@@ -13,11 +13,11 @@ export interface CachedReview {
  * review outlives the prompt that produced it — without this, users keep
  * seeing old-style output for any PR whose head commit has not moved.
  */
-const PREFIX = 'lowdiff:review:v6:';
+const PREFIX = 'lowdiff:review:v7:';
 const MAX_ENTRIES = 50;
 
-function key(owner: string, repo: string, number: number, headSha: string, mode: Mode): string {
-  return `${PREFIX}${owner}/${repo}#${number}@${headSha}:${mode}`;
+function key(owner: string, repo: string, number: number, headSha: string): string {
+  return `${PREFIX}${owner}/${repo}#${number}@${headSha}`;
 }
 
 /**
@@ -29,9 +29,8 @@ export async function readCache(
   repo: string,
   number: number,
   headSha: string,
-  mode: Mode,
 ): Promise<CachedReview | null> {
-  const k = key(owner, repo, number, headSha, mode);
+  const k = key(owner, repo, number, headSha);
   const stored = await chrome.storage.local.get(k);
   return (stored[k] as CachedReview | undefined) ?? null;
 }
@@ -41,11 +40,10 @@ export async function writeCache(
   repo: string,
   number: number,
   headSha: string,
-  mode: Mode,
   review: Omit<CachedReview, 'storedAt'>,
 ): Promise<void> {
   await chrome.storage.local.set({
-    [key(owner, repo, number, headSha, mode)]: { ...review, storedAt: Date.now() },
+    [key(owner, repo, number, headSha)]: { ...review, storedAt: Date.now() },
   });
   await evictOldest();
 }

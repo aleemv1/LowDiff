@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { noteSchema } from '@lowdiff/core';
 import { toAnthropicJsonSchema, toStrictJsonSchema } from '../src/schema-dialects.js';
 
-const strict = toStrictJsonSchema(noteSchema('explain')) as any;
+const strict = toStrictJsonSchema(noteSchema()) as any;
 const note = strict.properties.notes.items;
 
 describe('toStrictJsonSchema', () => {
@@ -35,14 +35,14 @@ describe('toStrictJsonSchema', () => {
   });
 
   it('does not mutate the input schema', () => {
-    const original = noteSchema('explain') as any;
+    const original = noteSchema() as any;
     toStrictJsonSchema(original);
     expect(original.properties.notes.items.required).not.toContain('code');
     expect(original.properties.notes.items.properties.title.maxLength).toBe(60);
   });
 });
 
-const anthropic = toAnthropicJsonSchema(noteSchema('explain')) as any;
+const anthropic = toAnthropicJsonSchema(noteSchema()) as any;
 const anthropicNote = anthropic.properties.notes.items;
 
 describe('toAnthropicJsonSchema', () => {
@@ -63,7 +63,7 @@ describe('toAnthropicJsonSchema', () => {
   });
 
   it('does not mutate the input schema', () => {
-    const original = noteSchema('explain') as any;
+    const original = noteSchema() as any;
     toAnthropicJsonSchema(original);
     expect(original.properties.notes.maxItems).toBe(30);
     expect(original.properties.notes.items.properties.line.minimum).toBe(1);

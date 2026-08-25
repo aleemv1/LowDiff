@@ -38,7 +38,7 @@ export class OpenAIClient implements LlmClient {
       {
         model: this.model,
         messages: [
-          { role: 'system', content: systemPrompt(req.mode) },
+          { role: 'system', content: systemPrompt() },
           { role: 'user', content: userPrompt(req.files, req.title, req.body) },
         ],
         response_format: {
@@ -46,7 +46,7 @@ export class OpenAIClient implements LlmClient {
           json_schema: {
             name: 'lowdiff_notes',
             strict: true,
-            schema: toStrictJsonSchema(noteSchema(req.mode)),
+            schema: toStrictJsonSchema(noteSchema()),
           },
         },
       },
@@ -54,7 +54,7 @@ export class OpenAIClient implements LlmClient {
     );
 
     const text = response.choices[0]?.message.content ?? '';
-    const parsed = parseResponse(JSON.parse(text), req.mode);
+    const parsed = parseResponse(JSON.parse(text));
     return {
       summary: parsed.summary,
       notes: parsed.notes,

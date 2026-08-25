@@ -36,14 +36,14 @@ export class GoogleClient implements LlmClient {
       model: this.model,
       contents: userPrompt(req.files, req.title, req.body),
       config: {
-        systemInstruction: systemPrompt(req.mode),
+        systemInstruction: systemPrompt(),
         responseMimeType: 'application/json',
-        responseJsonSchema: noteSchema(req.mode),
+        responseJsonSchema: noteSchema(),
         ...(req.signal ? { abortSignal: req.signal } : {}),
       },
     });
 
-    const parsed = parseResponse(JSON.parse(response.text ?? ''), req.mode);
+    const parsed = parseResponse(JSON.parse(response.text ?? ''));
     return {
       summary: parsed.summary,
       notes: parsed.notes,

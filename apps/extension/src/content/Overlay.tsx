@@ -1,6 +1,7 @@
 import { createPortal } from 'preact/compat';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
+import { REVIEW_KINDS } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
@@ -94,11 +95,26 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [usage, setUsage] = useState<string | null>(null);
   const [repos, setRepos] = useState<string[]>([]);
 
-  // What the overlay actually shows: the user picks kinds in the popup.
-  // Filtering at display time means toggles apply instantly from cache.
+  // One scan carries every kind; the Review/Explain toggle and the popup's
+  // kind filter are both display-time lenses over it, so switching either is
+  // instant and free.
+  const viewNotes = useMemo(
+    () => notes.filter((note) => mode === 'explain' || REVIEW_KINDS.includes(note.kind)),
+    [notes, mode],
+  );
   const visibleNotes = useMemo(
-    () => notes.filter((note) => !hiddenKinds.includes(note.kind)),
-    [notes, hiddenKinds],
+    () => viewNotes.filter((note) => !hiddenKinds.includes(note.kind)),
+    [viewNotes, hiddenKinds],
+  );
+  // Kept out by the lens, not the user's filter — say so, or the Review view
+  // silently sits on explanation the reader never learns exists.
+  const explainOnly = useMemo(
+    () =>
+      mode === 'review'
+        ? notes.filter((n) => !REVIEW_KINDS.includes(n.kind) && !hiddenKinds.includes(n.kind))
+            .length
+        : 0,
+    [notes, mode, hiddenKinds],
   );
 
   const notesRef = useRef<Note[]>([]);
@@ -183,7 +199,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, [visibleNotes, hiddenKinds, select]);
 
   const run = useCallback(
-    async (nextMode: Mode, refresh: boolean) => {
+    async (refresh: boolean) => {
       if (orphaned()) {
         setBusy(false);
         setError(REFRESH_HINT);
@@ -197,7 +213,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         reply = (await chrome.runtime.sendMessage({
           type: 'ANNOTATE',
           pr,
-          mode: nextMode,
           refresh,
         })) as AnnotateReply;
       } catch (cause) {
@@ -266,8 +281,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
 
-      const startMode = reply.ok ? reply.settings.defaultMode : 'review';
-      setMode(startMode);
+      setMode(reply.ok ? reply.settings.defaultMode : 'review');
       if (reply.ok) setHiddenKinds(reply.settings.hiddenKinds);
 
       if (reply.ok && !reply.settings.configured) {
@@ -275,7 +289,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
         setError('LowDiff needs an API key before it can review this pull request.');
         return;
       }
-      await run(startMode, false);
+      await run(false);
     })();
   }, [run]);
 
@@ -328,7 +342,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
       question,
       history: messages,
       port: portName,
-      mode,
     });
   };
 
@@ -390,7 +403,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, [open, closePopover]);
 
   const notesLost = visibleNotes.length - placed;
-  const notesHidden = notes.length - visibleNotes.length;
+  const notesHidden = viewNotes.length - visibleNotes.length;
 
   return (
     <div class="root" ref={rootRef}>
@@ -404,11 +417,21 @@ export function Overlay({ pr, overlayRoot }: Props) {
           if (next === mode) return;
           setMode(next);
           closePopover();
-          void run(next, false);
         }}
-        onRefresh={() => void run(mode, true)}
+        onRefresh={() => void run(true)}
         onJump={jump}
       />
+
+      {explainOnly > 0 && !busy && (
+        <div
+          style={{
+            font: `11px/1.5 'DM Sans',sans-serif`, color: C.faint,
+            margin: '-8px 0 14px', paddingLeft: '2px',
+          }}
+        >
+          {explainOnly} more note{explainOnly === 1 ? '' : 's'} in the Explain view.
+        </div>
+      )}
 
       {notesHidden > 0 && !busy && (
         <div
