@@ -6,7 +6,15 @@ import type { Mode } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
-import { C } from '../content/theme.js';
+import { C, STYLES } from '../content/theme.js';
+
+// The C tokens are var(--ld-*) references declared under :host for the shadow
+// -rooted overlay. This is a plain document, so re-scope them to :root — as
+// the dev playground does — or every border and background using them is
+// silently discarded and the page renders as bare text.
+const tokens = document.createElement('style');
+tokens.textContent = STYLES.replaceAll(':host', ':root');
+document.head.append(tokens);
 
 const PROVIDERS: { id: ProviderId; label: string; keyUrl: string; note: string }[] = [
   {
