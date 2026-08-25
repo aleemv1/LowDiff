@@ -204,6 +204,20 @@ describe('modernDom', () => {
     );
     expect(placed).toBe(0);
   });
+
+  it('anchors a deleted-line badge beside the code, not in the left column', () => {
+    // A deleted row carries its number in the LEFT column, with an empty
+    // second column before the code. Anchoring to the cited side's own cell
+    // put left-side stars one column short of the right-side ones — every
+    // badge belongs in the cell immediately before the code.
+    syncBadges(
+      [note({ anchor: { path: PATH, side: 'LEFT', line: 9, lineHash: 'x' } })],
+      modernDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    expect(badge.parentElement!.nextElementSibling!.hasAttribute('data-line-anchor')).toBe(true);
+  });
 });
 
 /**
@@ -243,6 +257,32 @@ describe('badge placement in the gutter', () => {
     );
     const after = classicDom.lines(PATH).find((l) => l.line === 5)!.codeCell.textContent;
     expect(after).toBe(before);
+  });
+
+  it('classic: a deleted-line badge anchors to the last number cell', () => {
+    // The classic unified table renders both number cells on every row; a
+    // deleted row's right cell is just empty. The badge belongs there — the
+    // gutter/code boundary — not beside the left column's number.
+    document.documentElement.innerHTML = `
+      <div class="file" data-tagsearch-path="src/removed.ts">
+        <table><tbody>
+          <tr>
+            <td class="blob-num blob-num-deletion" data-line-number="7"></td>
+            <td class="blob-num blob-num-deletion"></td>
+            <td class="blob-code blob-code-deletion"><span class="blob-code-inner">-gone()</span></td>
+          </tr>
+        </tbody></table>
+      </div>`;
+    clearBadges();
+    const placed = syncBadges(
+      [note({ anchor: { path: 'src/removed.ts', side: 'LEFT', line: 7, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    expect(placed).toBe(1);
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    const nums = badge.closest('tr')!.querySelectorAll('td.blob-num');
+    expect(badge.parentElement).toBe(nums[nums.length - 1]);
   });
 
   it('positions the badge without disturbing layout', () => {

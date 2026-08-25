@@ -37,13 +37,22 @@ export const classicDom: DiffDom = {
 
       // Cell order is [old, new]; a unified row may carry only one of them.
       const sides: Side[] = nums.length === 1 ? ['RIGHT'] : ['LEFT', 'RIGHT'];
+      // Badges anchor to the last number cell whichever side they cite, so
+      // deleted-line stars line up with added-line ones at the code boundary.
+      const edge = nums[nums.length - 1];
       nums.forEach((cell, i) => {
         const raw = cell.getAttribute('data-line-number');
         const side = sides[i];
         if (!raw || !side || !(cell instanceof HTMLElement)) return;
         const line = Number(raw);
         if (!Number.isInteger(line)) return;
-        out.push({ side, line, row: row as HTMLElement, codeCell, gutterCell: cell });
+        out.push({
+          side,
+          line,
+          row: row as HTMLElement,
+          codeCell,
+          gutterCell: edge instanceof HTMLElement ? edge : cell,
+        });
       });
     }
     return out;

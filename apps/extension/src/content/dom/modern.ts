@@ -57,10 +57,17 @@ export const modernDom: DiffDom = {
         cell.getAttribute('data-diff-side')?.toLowerCase() === 'left' ? 'LEFT' : 'RIGHT';
 
       const row = cell.closest('tr');
-      // The gutter is the other cell for this line — the one without an anchor.
-      const gutter = row?.querySelector<HTMLElement>(
-        `[data-line-number="${line}"][data-diff-side="${cell.getAttribute('data-diff-side') ?? ''}"]:not([data-line-anchor])`,
-      );
+      // Badges anchor to the cell immediately before the code cell — the last
+      // number column. Anchoring to the cited side's own cell left a
+      // deleted-line badge in the LEFT number column, one column short of
+      // where added-line badges sit, so the stars did not line up.
+      const before = cell.previousElementSibling;
+      const gutter =
+        before instanceof HTMLElement
+          ? before
+          : row?.querySelector<HTMLElement>(
+              `[data-line-number="${line}"][data-diff-side="${cell.getAttribute('data-diff-side') ?? ''}"]:not([data-line-anchor])`,
+            );
 
       out.push({
         side,
