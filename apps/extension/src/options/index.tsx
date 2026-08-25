@@ -134,9 +134,12 @@ function Options() {
       )}
 
       <div>
-        <span class="rise" style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
-          <span class="twinkle">✦</span>
-        </span>
+        <div class="rise" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flex: 'none' }}>
+            <span class="twinkle">✦</span>
+          </span>
+          <span style={{ font: `700 20px 'DM Sans',sans-serif`, color: C.ink }}>LowDiff</span>
+        </div>
         <h1
           class="rise"
           style={{

@@ -45,6 +45,10 @@ const state = await page.evaluate(() => {
 // fields folded away, and changes persisting without a Save button.
 const landing = await page.evaluate(() => ({
   hasSteps: (document.body.textContent ?? '').includes('Open any pull request'),
+  // A wordmark element beside the logo, not just the name inside the pitch.
+  hasWordmark: [...document.querySelectorAll('span, b, h1, h2')].some(
+    (e) => e.textContent?.trim() === 'LowDiff',
+  ),
   advancedCollapsed: ![...document.querySelectorAll('input')].some(
     (i) => i.placeholder.startsWith('Needed for private repos') && i.checkVisibility(),
   ),
@@ -81,7 +85,8 @@ const autosave = await page.evaluate(async () => {
 const pass = {
   inputHasBorder: state.inputBorderStyle === 'solid',
   tokensResolve: state.activeProviderBorder === 'rgb(91, 91, 214)',
-  guidedLanding: landing.hasSteps && landing.advancedCollapsed && !landing.hasSaveButton,
+  guidedLanding:
+    landing.hasSteps && landing.hasWordmark && landing.advancedCollapsed && !landing.hasSaveButton,
   autosave: autosave.persistedKey === 'sk-test-autosave' && autosave.toastShown,
   scaledLayout:
     scale.contentWidth >= 1000 &&
