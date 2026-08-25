@@ -17,14 +17,29 @@ tokens.textContent = STYLES.replaceAll(':host', ':root');
 document.head.append(tokens);
 
 // This page opens on install, so it is the landing: pitch beside the form,
+// growing with the window up to a readable cap, centred both ways, and
 // stacking on narrow windows.
 const layout = document.createElement('style');
 layout.textContent = `
   .opt-grid {
-    display: grid; grid-template-columns: 380px 460px; gap: 40px;
-    justify-content: center; align-items: start; padding: 48px 24px 80px;
+    display: grid; grid-template-columns: 5fr 6fr;
+    gap: clamp(40px, 6vw, 96px);
+    max-width: 1160px; margin: 0 auto; box-sizing: border-box;
+    align-items: start; align-content: center; min-height: 100vh;
+    padding: 48px 24px 80px;
   }
-  @media (max-width: 940px) { .opt-grid { grid-template-columns: minmax(0, 520px); } }
+  @media (max-width: 940px) {
+    .opt-grid { grid-template-columns: minmax(0, 520px); justify-content: center; min-height: 0; }
+  }
+
+  @keyframes opt-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .rise { animation: opt-rise .55s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes opt-twinkle {
+    0%, 100% { transform: none; }
+    50% { transform: rotate(12deg) scale(1.12); }
+  }
+  .twinkle { display: inline-block; animation: opt-twinkle 3.2s ease-in-out 1s infinite; }
+  @media (prefers-reduced-motion: reduce) { .rise, .twinkle { animation: none; } }
 `;
 document.head.append(layout);
 
@@ -119,20 +134,33 @@ function Options() {
       )}
 
       <div>
-        <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
-          ✦
+        <span class="rise" style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
+          <span class="twinkle">✦</span>
         </span>
-        <h1 style={{ font: `700 26px/1.25 'DM Sans',sans-serif`, color: C.ink, margin: '12px 0 8px' }}>
+        <h1
+          class="rise"
+          style={{
+            font: `700 clamp(26px, 2.3vw, 33px)/1.25 'DM Sans',sans-serif`,
+            color: C.ink, margin: '12px 0 8px', animationDelay: '.06s',
+          }}
+        >
           Review annotations,
           <br />
           on the diff itself.
         </h1>
-        <p style={{ font: `14px/1.6 'DM Sans',sans-serif`, color: C.muted, margin: '0 0 22px' }}>
+        <p
+          class="rise"
+          style={{ font: `14px/1.6 'DM Sans',sans-serif`, color: C.muted, margin: '0 0 22px', animationDelay: '.12s' }}
+        >
           LowDiff layers AI findings over GitHub pull requests. Keys stay in this browser and
           are sent only to the provider you pick.
         </p>
         {STEPS.map((step, i) => (
-          <div key={step.title} style={{ display: 'flex', gap: '12px', margin: '14px 0' }}>
+          <div
+            key={step.title}
+            class="rise"
+            style={{ display: 'flex', gap: '12px', margin: '14px 0', animationDelay: `${0.18 + i * 0.08}s` }}
+          >
             <b
               style={{
                 width: '22px', height: '22px', borderRadius: '50%', flex: 'none',
@@ -154,7 +182,13 @@ function Options() {
         ))}
       </div>
 
-      <div style={{ background: '#fff', borderRadius: '12px', border: `1px solid ${C.line}`, padding: '6px 22px 20px' }}>
+      <div
+        class="rise"
+        style={{
+          background: '#fff', borderRadius: '12px', border: `1px solid ${C.line}`,
+          padding: '6px 22px 20px', animationDelay: '.12s',
+        }}
+      >
         <label style={label}>MODEL PROVIDER</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {PROVIDERS.map((p) => (

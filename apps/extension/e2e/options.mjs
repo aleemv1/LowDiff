@@ -16,6 +16,7 @@ const DIST = resolve(import.meta.dirname, '..', 'dist');
 const profile = mkdtempSync(join(tmpdir(), 'lowdiff-options-'));
 const context = await chromium.launchPersistentContext(profile, {
   headless: false,
+  viewport: { width: 1440, height: 900 },
   args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`],
 });
 
@@ -50,6 +51,22 @@ const landing = await page.evaluate(() => ({
   hasSaveButton: [...document.querySelectorAll('button')].some((b) => b.textContent === 'Save'),
 }));
 
+// The landing must scale to the window: content grows with the viewport,
+// centred both ways, and the headline carries its entrance animation.
+const scale = await page.evaluate(() => {
+  const grid = document.querySelector('.opt-grid');
+  const kids = [...grid.children].filter((k) => getComputedStyle(k).position !== 'fixed');
+  const first = kids[0].getBoundingClientRect();
+  const last = kids[kids.length - 1].getBoundingClientRect();
+  return {
+    contentWidth: Math.round(last.right - first.left),
+    leftGap: Math.round(first.left),
+    rightGap: Math.round(innerWidth - last.right),
+    pitchTop: Math.round(first.top),
+    titleAnimated: getComputedStyle(document.querySelector('h1')).animationName !== 'none',
+  };
+});
+
 // Typing a key must save on its own and say so.
 await page.fill('input[type="password"]', 'sk-test-autosave');
 await page.waitForTimeout(1100);
@@ -66,6 +83,11 @@ const pass = {
   tokensResolve: state.activeProviderBorder === 'rgb(91, 91, 214)',
   guidedLanding: landing.hasSteps && landing.advancedCollapsed && !landing.hasSaveButton,
   autosave: autosave.persistedKey === 'sk-test-autosave' && autosave.toastShown,
+  scaledLayout:
+    scale.contentWidth >= 1000 &&
+    Math.abs(scale.leftGap - scale.rightGap) <= 40 &&
+    scale.pitchTop > 90,
+  titleAnimated: scale.titleAnimated,
 };
 
 const shotAt = process.argv.indexOf('--shot');
@@ -74,7 +96,7 @@ if (shotAt !== -1) {
   console.log(`screenshot → ${process.argv[shotAt + 1]}`);
 }
 
-console.log(JSON.stringify({ ...state, landing, autosave, pass }, null, 2));
+console.log(JSON.stringify({ ...state, landing, scale, autosave, pass }, null, 2));
 if (Object.values(pass).some((p) => !p)) process.exitCode = 1;
 
 await context.close();
