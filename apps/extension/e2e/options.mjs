@@ -45,10 +45,17 @@ const state = await page.evaluate(() => {
 // fields folded away, and changes persisting without a Save button.
 const landing = await page.evaluate(() => ({
   hasSteps: (document.body.textContent ?? '').includes('Open any pull request'),
-  // A wordmark element beside the logo, not just the name inside the pitch.
+  // A wordmark element beside the logo, not just the name inside the pitch —
+  // and it makes its own entrance.
   hasWordmark: [...document.querySelectorAll('span, b, h1, h2')].some(
     (e) => e.textContent?.trim() === 'LowDiff',
   ),
+  wordmarkAnimated: (() => {
+    const el = [...document.querySelectorAll('span, b, h1, h2')].find(
+      (e) => e.textContent?.trim() === 'LowDiff',
+    );
+    return el ? getComputedStyle(el).animationName !== 'none' : false;
+  })(),
   advancedCollapsed: ![...document.querySelectorAll('input')].some(
     (i) => i.placeholder.startsWith('Needed for private repos') && i.checkVisibility(),
   ),
@@ -93,6 +100,7 @@ const pass = {
     Math.abs(scale.leftGap - scale.rightGap) <= 40 &&
     scale.pitchTop > 90,
   titleAnimated: scale.titleAnimated,
+  wordmarkAnimated: landing.wordmarkAnimated,
 };
 
 const shotAt = process.argv.indexOf('--shot');

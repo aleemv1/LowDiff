@@ -34,12 +34,17 @@ layout.textContent = `
 
   @keyframes opt-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
   .rise { animation: opt-rise .55s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes opt-slide-left {
+    from { opacity: 0; transform: translateX(26px); }
+    to { opacity: 1; transform: none; }
+  }
+  .slide-left { animation: opt-slide-left .6s cubic-bezier(.2,.7,.3,1) both; }
   @keyframes opt-twinkle {
     0%, 100% { transform: none; }
     50% { transform: rotate(12deg) scale(1.12); }
   }
   .twinkle { display: inline-block; animation: opt-twinkle 3.2s ease-in-out 1s infinite; }
-  @media (prefers-reduced-motion: reduce) { .rise, .twinkle { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .rise, .slide-left, .twinkle { animation: none; } }
 `;
 document.head.append(layout);
 
@@ -135,10 +140,15 @@ function Options() {
 
       <div>
         <div class="rise" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flex: 'none' }}>
+          <span style={{ width: '34px', height: '34px', borderRadius: '10px', background: C.accent, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', flex: 'none' }}>
             <span class="twinkle">✦</span>
           </span>
-          <span style={{ font: `700 20px 'DM Sans',sans-serif`, color: C.ink }}>LowDiff</span>
+          <span
+            class="slide-left"
+            style={{ font: `700 28px 'DM Sans',sans-serif`, color: C.ink, animationDelay: '.2s' }}
+          >
+            LowDiff
+          </span>
         </div>
         <h1
           class="rise"
