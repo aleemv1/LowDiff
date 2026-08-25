@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
-import { C, KIND_STYLE } from '../theme.js';
+import { C, KIND_STYLE, glowFor } from '../theme.js';
 import { Sparkle } from './Sparkle.js';
 import { Markdown } from './Markdown.js';
 
@@ -35,6 +35,9 @@ function counts(notes: Note[]): [NoteKind, number][] {
 
 export function SummaryCard(props: Props) {
   const [open, setOpen] = useState(true);
+  // Chips glow like unopened badges until their first click, so the jump
+  // affordance is discoverable without a label.
+  const [jumped, setJumped] = useState<Partial<Record<NoteKind, true>>>({});
 
   return (
     <div
@@ -70,13 +73,17 @@ export function SummaryCard(props: Props) {
             <button
               key={kind}
               class="pill"
-              onClick={() => props.onJump(kind)}
+              onClick={() => {
+                setJumped((prev) => ({ ...prev, [kind]: true }));
+                props.onJump(kind);
+              }}
               title={`Jump to the next ${LABEL[kind]!.one} badge in the diff`}
               style={{
                 background: KIND_STYLE[kind]!.headBg,
                 color: KIND_STYLE[kind]!.color,
                 border: '1px solid color-mix(in srgb, currentColor 40%, transparent)',
                 cursor: 'pointer',
+                boxShadow: jumped[kind] ? 'none' : glowFor(KIND_STYLE[kind]!.color),
               }}
             >
               {n} {n === 1 ? LABEL[kind]!.one : LABEL[kind]!.many} ↓

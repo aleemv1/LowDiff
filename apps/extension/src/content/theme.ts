@@ -31,6 +31,17 @@ export const C = {
   ghMuted: 'var(--ld-fg-muted)',
 } as const;
 
+/**
+ * Soft halo in the note's own colour, so an unopened badge is visible against
+ * both diff backgrounds and its kind is readable at a glance. color-mix keeps
+ * it translucent while the colour itself stays a theme variable — pass a
+ * variable that resolves where the element lives (Primer vars in the page,
+ * --ld-* vars inside the shadow root).
+ */
+export function glowFor(color: string): string {
+  return `0 0 0 1px color-mix(in srgb, ${color} 40%, transparent), 0 0 8px 2px color-mix(in srgb, ${color} 55%, transparent)`;
+}
+
 export const KIND_STYLE: Record<string, { color: string; headBg: string }> = {
   RISK: { color: 'var(--ld-danger-fg)', headBg: 'var(--ld-danger-bg)' },
   SECURITY: { color: 'var(--ld-danger-fg)', headBg: 'var(--ld-danger-bg)' },

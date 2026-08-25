@@ -139,18 +139,24 @@ export function Overlay({ pr, overlayRoot }: Props) {
 
   /** Cycle through the placed badges of one kind, glowing each in turn. */
   const jumpAt = useRef<Partial<Record<NoteKind, number>>>({});
-  const jump = useCallback((kind: NoteKind) => {
-    const badges = [
-      ...document.querySelectorAll<HTMLElement>(
-        `[data-lowdiff-badge][data-lowdiff-kind="${kind}"]`,
-      ),
-    ];
-    if (badges.length === 0) return;
-    const at = ((jumpAt.current[kind] ?? -1) + 1) % badges.length;
-    jumpAt.current[kind] = at;
-    badges[at]!.scrollIntoView({ block: 'center' });
-    setActiveBadge(badges[at]!);
-  }, []);
+  const jump = useCallback(
+    (kind: NoteKind) => {
+      const badges = [
+        ...document.querySelectorAll<HTMLElement>(
+          `[data-lowdiff-badge][data-lowdiff-kind="${kind}"]`,
+        ),
+      ];
+      if (badges.length === 0) return;
+      // Close any open note first: leaving it to the scroll-close heuristic
+      // means its handler fires mid-jump and wipes the glow set below.
+      closePopover();
+      const at = ((jumpAt.current[kind] ?? -1) + 1) % badges.length;
+      jumpAt.current[kind] = at;
+      badges[at]!.scrollIntoView({ block: 'center' });
+      setActiveBadge(badges[at]!);
+    },
+    [closePopover],
+  );
 
   /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {

@@ -1,6 +1,7 @@
 import type { Note } from '@lowdiff/core';
 import type { DiffDom } from './dom/index.js';
 import { SPARKLE_SVG } from './components/Sparkle.js';
+import { glowFor } from './theme.js';
 
 // Badges live in GitHub's page, not our shadow root, so they cannot read the
 // --ld-* variables defined on :host. They use Primer's variables directly.
@@ -26,14 +27,6 @@ const HIGHLIGHT_WASH = 'color-mix(in srgb, var(--fgColor-accent, #5b5bd6) 10%, t
 
 const BADGE_ATTR = 'data-lowdiff-badge';
 
-/**
- * Soft halo in the note's own colour, so an unopened badge is visible against
- * both diff backgrounds and its kind is readable at a glance. color-mix keeps
- * it translucent while the colour itself stays a theme variable.
- */
-function glowFor(color: string): string {
-  return `0 0 0 1px color-mix(in srgb, ${color} 40%, transparent), 0 0 8px 2px color-mix(in srgb, ${color} 55%, transparent)`;
-}
 
 export interface BadgeTarget {
   note: Note;

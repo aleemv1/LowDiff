@@ -215,11 +215,16 @@ const popover = await page.evaluate(() => {
 
 // Chip → badge navigation: clicking a count jumps to that kind's next badge,
 // shown by the active glow; a second click cycles to the following one.
-const jump = await page.evaluate(() => {
+const jump = await page.evaluate(async () => {
+  // Preact re-renders async, so give each click a beat before reading styles.
+  const settle = () => new Promise((r) => setTimeout(r, 60));
   const host = document.getElementById('lowdiff-root');
-  const chip = [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])].find((b) =>
-    /risk/.test(b.textContent ?? ''),
-  );
+  const chips = [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])];
+  const chip = chips.find((b) => /risk/.test(b.textContent ?? ''));
+  const security = chips.find((b) => /security/.test(b.textContent ?? ''));
+  // An unvisited chip glows like an unopened badge; its first click quiets it.
+  const glowing = (b) => Boolean(b) && getComputedStyle(b).boxShadow !== 'none';
+  const glowBefore = { security: glowing(security), risk: glowing(chip) };
   const activeLine = () =>
     [...document.querySelectorAll('[data-lowdiff-badge]')]
       .find(
@@ -229,10 +234,13 @@ const jump = await page.evaluate(() => {
       )
       ?.parentElement?.getAttribute('data-line-number') ?? null;
   chip?.click();
+  await settle();
   const first = activeLine();
   chip?.click();
+  await settle();
   const second = activeLine();
-  return { chipFound: Boolean(chip), first, second };
+  const glowAfter = { security: glowing(security), risk: glowing(chip) };
+  return { chipFound: Boolean(chip), glowBefore, glowAfter, first, second };
 });
 
 // Toggle a kind off via settings, as the popup does, and confirm the overlay
