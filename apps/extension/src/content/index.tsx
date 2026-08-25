@@ -109,7 +109,10 @@ function unmount(): void {
 
 /**
  * GitHub renders this view client-side and navigates without a page load, so a
- * one-shot mount at document_idle usually runs before the diff exists.
+ * one-shot mount at document_idle usually runs before the diff exists. For the
+ * same reason the manifest matches all of github.com, not just PR URLs:
+ * content scripts inject only at document load, and the load that brings a
+ * reader here is usually on some other page entirely.
  */
 let lastUrl = window.location.href;
 

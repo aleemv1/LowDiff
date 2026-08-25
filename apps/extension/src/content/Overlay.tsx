@@ -26,6 +26,49 @@ interface Open {
 const POPOVER_WIDTH = 440;
 
 /**
+ * A reloaded extension (every dev rebuild) orphans this script and only a page
+ * reload reconnects it. Orphaned chrome.* calls do not fail reliably — some
+ * throw, some hang forever — so check for the condition instead of waiting on
+ * the round-trip, and say what to do instead of leaving the card on a spinner.
+ */
+const REFRESH_HINT = 'LowDiff was updated. Refresh the page to reconnect.';
+
+function orphaned(): boolean {
+  try {
+    return !chrome.runtime?.id;
+  } catch {
+    return true;
+  }
+}
+
+function describeFailure(cause: unknown): string {
+  if (orphaned()) return REFRESH_HINT;
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+/**
+ * The settings round-trip is a storage read — milliseconds, even with a cold
+ * worker start. An orphaned script's calls can hang without ever rejecting
+ * (and with `chrome.runtime.id` still set), so the hang is the one reliable
+ * signal, and a generous deadline on a fast call cannot misfire on slowness.
+ */
+function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise((deliver, reject) => {
+    const timer = setTimeout(() => reject(new Error(REFRESH_HINT)), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        deliver(value);
+      },
+      (cause) => {
+        clearTimeout(timer);
+        reject(cause);
+      },
+    );
+  });
+}
+
+/**
  * Owns the summary card, the note popover, and the chat panel.
  *
  * The per-line badges are not rendered here — they are injected into GitHub's
@@ -120,14 +163,28 @@ export function Overlay({ pr, overlayRoot }: Props) {
 
   const run = useCallback(
     async (nextMode: Mode, refresh: boolean) => {
+      if (orphaned()) {
+        setBusy(false);
+        setError(REFRESH_HINT);
+        setNotes([]);
+        return;
+      }
       setBusy(true);
       setError(null);
-      const reply = (await chrome.runtime.sendMessage({
-        type: 'ANNOTATE',
-        pr,
-        mode: nextMode,
-        refresh,
-      })) as AnnotateReply;
+      let reply: AnnotateReply;
+      try {
+        reply = (await chrome.runtime.sendMessage({
+          type: 'ANNOTATE',
+          pr,
+          mode: nextMode,
+          refresh,
+        })) as AnnotateReply;
+      } catch (cause) {
+        setBusy(false);
+        setError(describeFailure(cause));
+        setNotes([]);
+        return;
+      }
 
       setBusy(false);
       if (!reply.ok) {
@@ -149,21 +206,44 @@ export function Overlay({ pr, overlayRoot }: Props) {
         | undefined;
       if (next) setHiddenKinds(next.hiddenKinds ?? []);
     };
-    chrome.storage.onChanged.addListener(onStorage);
+    // Synchronous throw when orphaned; there are no settings to track then.
+    try {
+      chrome.storage.onChanged.addListener(onStorage);
+    } catch {
+      return;
+    }
     return () => chrome.storage.onChanged.removeListener(onStorage);
   }, []);
 
   useEffect(() => {
-    void chrome.runtime
-      .sendMessage({ type: 'LIST_REPOS' })
-      .then((reply: { ok: boolean; repos?: string[] }) => {
-        if (reply.ok && reply.repos) setRepos(reply.repos);
-      })
-      .catch(() => {});
+    // Orphaned sendMessage throws synchronously — past the reach of .catch().
+    try {
+      void chrome.runtime
+        .sendMessage({ type: 'LIST_REPOS' })
+        .then((reply: { ok: boolean; repos?: string[] }) => {
+          if (reply.ok && reply.repos) setRepos(reply.repos);
+        })
+        .catch(() => {});
+    } catch {
+      // Repos stay empty; the card below reports the refresh hint.
+    }
     void (async () => {
-      const reply = (await chrome.runtime.sendMessage({
-        type: 'GET_PUBLIC_SETTINGS',
-      })) as PublicSettingsReply;
+      if (orphaned()) {
+        setBusy(false);
+        setError(REFRESH_HINT);
+        return;
+      }
+      let reply: PublicSettingsReply;
+      try {
+        reply = (await withDeadline(
+          chrome.runtime.sendMessage({ type: 'GET_PUBLIC_SETTINGS' }),
+          2500,
+        )) as PublicSettingsReply;
+      } catch (cause) {
+        setBusy(false);
+        setError(describeFailure(cause));
+        return;
+      }
 
       const startMode = reply.ok ? reply.settings.defaultMode : 'review';
       setMode(startMode);
