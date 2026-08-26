@@ -6,7 +6,10 @@ import { join, resolve } from 'node:path';
 
 const DIST = resolve(import.meta.dirname, '..', 'dist');
 const dark = process.argv.includes('--dark');
-const shot = process.argv[process.argv.indexOf('--shot') + 1];
+// indexOf returns -1 without the flag, and argv[0] is the node binary — a
+// truthy non-path that crashed the screenshot call.
+const shotAt = process.argv.indexOf('--shot');
+const shot = shotAt === -1 ? null : process.argv[shotAt + 1];
 
 const profile = mkdtempSync(join(tmpdir(), 'lowdiff-popup-'));
 const context = await chromium.launchPersistentContext(profile, {

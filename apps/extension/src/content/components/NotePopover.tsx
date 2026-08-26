@@ -42,6 +42,10 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
         border: `1px solid ${C.line}`, borderRadius: '12px',
         boxShadow: '0 12px 32px rgba(0,0,0,.28)', animation: 'notePop .14s ease-out',
         whiteSpace: 'normal', overflow: 'hidden', textAlign: 'left',
+        // The popover portals into the document.body shadow host, where
+        // `all: initial` applies and nothing inherits a face — without this
+        // the note body rendered in the browser's serif fallback.
+        fontFamily: `'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 14px', background: style.headBg }}>

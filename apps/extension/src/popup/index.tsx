@@ -79,7 +79,11 @@ function Popup() {
   };
 
   const provider = PROVIDERS.find((p) => p.id === settings.provider) ?? PROVIDERS[0]!;
-  const hasKey = Boolean(settings.keys[settings.provider]);
+  const connected = (id: string) =>
+    Boolean(settings.keys[id as keyof typeof settings.keys]) ||
+    (id === 'google' && Boolean(settings.googleAccount)) ||
+    (id === 'openai' && Boolean(settings.openaiTokens));
+  const hasKey = connected(settings.provider);
   const models = useMemo(() => {
     const list = [...provider.models];
     // A custom model from options stays selectable rather than vanishing.
@@ -138,7 +142,7 @@ function Popup() {
             }}
           >
             {p.label}
-            {!settings.keys[p.id] && ' ⚠'}
+            {!connected(p.id) && ' ⚠'}
           </button>
         ))}
       </div>
