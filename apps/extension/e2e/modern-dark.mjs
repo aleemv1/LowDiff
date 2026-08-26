@@ -180,14 +180,12 @@ const state = await page.evaluate(() => {
       tag: p.tagName,
       text: p.textContent?.trim(),
     })),
-    proseMaxWidth: (() => {
-      let el = card?.querySelector('p')?.parentElement ?? null;
-      while (el) {
-        const mw = getComputedStyle(el).maxWidth;
-        if (mw !== 'none') return mw;
-        el = el.parentElement;
-      }
-      return 'none';
+    // The prose block must reach the findings rail: gap ≈ the flex gutter.
+    proseToRailGap: (() => {
+      const prose = card?.querySelector('p')?.parentElement ?? null;
+      const rail = card?.querySelector('[data-lowdiff-finding]')?.parentElement ?? null;
+      if (!prose || !rail) return null;
+      return Math.round(rail.getBoundingClientRect().left - prose.getBoundingClientRect().right);
     })(),
     hint: (() => {
       const el = [...(card?.querySelectorAll('span, b') ?? [])].find((s) =>

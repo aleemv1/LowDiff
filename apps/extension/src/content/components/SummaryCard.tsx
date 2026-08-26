@@ -156,9 +156,8 @@ export function SummaryCard(props: Props) {
             color: C.body,
           }}
         >
-          {/* A capped measure: the card spans the diff column, and on a wide
-              monitor full-width prose runs hundreds of characters per line. */}
-          <div style={{ maxWidth: '72ch', minWidth: 0, flex: '0 1 auto' }}>
+          {/* The prose fills everything up to the findings list. */}
+          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
             {props.busy && props.notes.length === 0 ? (
               'Reading the diff…'
             ) : (
@@ -193,7 +192,7 @@ export function SummaryCard(props: Props) {
           {wide && props.notes.length > 0 && (
             <div
               style={{
-                flex: '1 1 320px', maxWidth: '520px', marginLeft: 'auto', minWidth: 0,
+                flex: '0 1 460px', minWidth: '300px',
                 borderLeft: `1px solid ${C.line}`, padding: '2px 0 0 24px',
               }}
             >
