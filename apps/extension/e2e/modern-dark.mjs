@@ -279,6 +279,33 @@ await page.evaluate(() => {
   root.querySelector('[title="Ask AI"]')?.click();
 });
 await page.waitForTimeout(500);
+
+// Opening the chat is a statement of intent: the next keystrokes belong in
+// its input without a second click. Type immediately, focusing nothing.
+await page.keyboard.type('hey', { delay: 20 });
+const autofocus = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  return {
+    valueAfterOpen:
+      root.querySelector('input[placeholder="Ask anything about this PR…"]')?.value ?? null,
+  };
+});
+
+// Coming back counts too: blur, click the panel chrome, type — still here.
+await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  root.querySelector('input[placeholder="Ask anything about this PR…"]')?.blur();
+  [...root.querySelectorAll('span')].find((el) => el.textContent === 'Chat')?.click();
+});
+await page.keyboard.type('yo', { delay: 20 });
+const refocus = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  return {
+    valueAfterReturn:
+      root.querySelector('input[placeholder="Ask anything about this PR…"]')?.value ?? null,
+  };
+});
+
 await page.evaluate(() => {
   window.__leaked = [];
   document.addEventListener('keydown', (e) => {
@@ -290,7 +317,9 @@ await page.evaluate(() => {
     if (!field) window.__leaked.push(e.key);
   });
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
-  root.querySelector('input[placeholder="Ask anything about this PR…"]')?.focus();
+  const input = root.querySelector('input[placeholder="Ask anything about this PR…"]');
+  input?.focus();
+  input?.select();
 });
 await page.keyboard.type('a.t/', { delay: 30 });
 const chatKeys = await page.evaluate(() => {
@@ -306,7 +335,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, pulse, explainView, filtered, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, pulse, explainView, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);

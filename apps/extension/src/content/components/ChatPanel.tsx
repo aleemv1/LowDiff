@@ -21,6 +21,14 @@ interface Props {
 
 export function ChatPanel(props: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Opening the chat is a statement of intent: the next keystrokes belong in
+  // this input. Unfocused, they fall through to the page — where they read as
+  // GitHub hotkeys — and "typing does nothing" is the symptom.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -29,6 +37,16 @@ export function ChatPanel(props: Props) {
 
   return (
     <div
+      onClick={(e) => {
+        // Coming back to the panel means coming back to the conversation:
+        // route stray clicks to the input, but never over a control click or
+        // a text selection in the transcript.
+        const target = e.target;
+        if (target instanceof HTMLElement && target.closest('button, a, input')) return;
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) return;
+        inputRef.current?.focus();
+      }}
       style={{
         position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 2147483000, width: '400px',
         display: 'flex', flexDirection: 'column', background: C.surface,
@@ -106,6 +124,7 @@ export function ChatPanel(props: Props) {
           </div>
 
           <input
+            ref={inputRef}
             value={props.input}
             placeholder="Ask anything about this PR…"
             onInput={(e) => props.onInput((e.target as HTMLInputElement).value)}
