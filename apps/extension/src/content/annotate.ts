@@ -40,11 +40,36 @@ export interface BadgeTarget {
  * a class name here would collide with GitHub's stylesheet, and any rule we
  * added to the page could leak onto their markup.
  */
+const STYLE_ID = 'lowdiff-badge-style';
+
+/**
+ * Badges are styled inline, but a pulse needs @keyframes, which cannot be
+ * inlined — one attribute-scoped style element carries them. Nothing here
+ * can leak onto GitHub's markup: every rule is behind our data attribute.
+ */
+function ensureBadgeStyle(): void {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+@keyframes lowdiff-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+[${BADGE_ATTR}] > span { animation: lowdiff-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  [${BADGE_ATTR}] > span { animation: none; }
+}
+`;
+  document.head.append(style);
+}
+
 export function syncBadges(
   notes: readonly Note[],
   dom: DiffDom,
   onSelect: (target: BadgeTarget) => void,
 ): number {
+  ensureBadgeStyle();
   clearBadges();
 
   const byPath = new Map<string, Note[]>();
@@ -154,6 +179,8 @@ export function setActiveBadge(active: HTMLElement | null): void {
     visual.style.border = `1.5px solid ${on ? ACCENT : color}`;
     visual.style.boxShadow = glowFor(on ? ACCENT : color);
     visual.style.transform = on ? 'scale(1.2)' : 'none';
+    // The open note's badge holds still, so its size reads as selection.
+    visual.style.animation = on ? 'none' : '';
   }
 }
 

@@ -211,6 +211,29 @@ const popover = await page.evaluate(() => {
   };
 });
 
+// Stars breathe: unopened badges pulse; the active (opened) one holds still
+// so its enlarged state reads as selection, not animation.
+const pulse = await page.evaluate(() => {
+  const badges = [...document.querySelectorAll('[data-lowdiff-badge]')];
+  const names = badges.map((b) =>
+    b.firstElementChild instanceof HTMLElement
+      ? getComputedStyle(b.firstElementChild).animationName
+      : null,
+  );
+  const active = badges.find(
+    (b) =>
+      b.firstElementChild instanceof HTMLElement &&
+      b.firstElementChild.style.transform.includes('scale'),
+  );
+  return {
+    names,
+    activeAnimation:
+      active && active.firstElementChild instanceof HTMLElement
+        ? getComputedStyle(active.firstElementChild).animationName
+        : null,
+  };
+});
+
 // One scan, two views: the default Review view hides the seeded SUGGESTION;
 // switching to Explain reveals it instantly — a lens change, not a re-scan.
 const explainView = await page.evaluate(async () => {
@@ -283,7 +306,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, explainView, filtered, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, pulse, explainView, filtered, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
