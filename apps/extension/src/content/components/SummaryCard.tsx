@@ -64,7 +64,7 @@ export function SummaryCard(props: Props) {
           AI review of this pull request
         </span>
 
-        <span style={{ display: 'flex', gap: '6px', marginLeft: '8px', flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px', flexWrap: 'wrap' }}>
           {counts(props.notes).map(([kind, n]) => (
             <span
               key={kind}

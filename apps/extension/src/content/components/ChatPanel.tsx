@@ -21,7 +21,7 @@ interface Props {
 
 export function ChatPanel(props: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Opening the chat is a statement of intent: the next keystrokes belong in
   // this input. Unfocused, they fall through to the page — where they read as
@@ -29,6 +29,11 @@ export function ChatPanel(props: Props) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Collapse back to one row once the question is sent.
+  useEffect(() => {
+    if (props.input === '' && inputRef.current) inputRef.current.style.height = 'auto';
+  }, [props.input]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -123,18 +128,29 @@ export function ChatPanel(props: Props) {
             </span>
           </div>
 
-          <input
+          <textarea
             ref={inputRef}
+            rows={1}
             value={props.input}
             placeholder="Ask anything about this PR…"
-            onInput={(e) => props.onInput((e.target as HTMLInputElement).value)}
+            onInput={(e) => {
+              const el = e.target as HTMLTextAreaElement;
+              // Grow with the question, up to a few lines, then scroll.
+              el.style.height = 'auto';
+              el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+              props.onInput(el.value);
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') props.onSend();
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                props.onSend();
+              }
             }}
             style={{
               width: '100%', border: 'none', padding: '10px 12px 6px',
-              font: `12.5px 'DM Sans',sans-serif`, background: 'transparent',
-              outline: 'none', color: C.ink,
+              font: `12.5px/1.5 'DM Sans',sans-serif`, background: 'transparent',
+              outline: 'none', color: C.ink, resize: 'none',
+              maxHeight: '120px', overflowY: 'auto',
             }}
           />
 

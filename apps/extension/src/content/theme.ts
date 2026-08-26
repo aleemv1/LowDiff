@@ -113,7 +113,10 @@ export const STYLES = `
 
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-.pill { border-radius: 999px; padding: 3px 10px; font: 600 10.5px inherit; }
+.pill {
+  display: inline-flex; align-items: center; line-height: 1;
+  border-radius: 999px; padding: 5px 10px; font: 600 10.5px inherit;
+}
 
 .btn {
   border-radius: 999px; padding: 6px 14px; cursor: pointer; border: none;

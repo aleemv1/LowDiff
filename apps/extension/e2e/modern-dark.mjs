@@ -234,6 +234,59 @@ const pulse = await page.evaluate(async () => {
   return { whileOpen, afterClose };
 });
 
+// Chips must share one height and centre line whatever their content —
+// emoji and plain-text pills get different line boxes without a fix.
+const chipGeometry = await page.evaluate(() => {
+  const host = document.getElementById('lowdiff-root');
+  const chips = [...(host?.shadowRoot?.querySelectorAll('.pill') ?? [])].map((c) =>
+    c.getBoundingClientRect(),
+  );
+  const title = [...(host?.shadowRoot?.querySelectorAll('span') ?? [])]
+    .find((el) => el.textContent === 'AI review of this pull request')
+    ?.getBoundingClientRect();
+  const centers = chips.map((r) => Math.round((r.top + r.bottom) / 2));
+  return {
+    heights: chips.map((r) => Math.round(r.height)),
+    centerSpread: centers.length ? Math.max(...centers) - Math.min(...centers) : null,
+    offCenterFromTitle: title && centers.length
+      ? Math.round(Math.max(...centers.map((c) => Math.abs(c - (title.top + title.bottom) / 2))))
+      : null,
+  };
+});
+
+// The chat field wraps: it is a textarea that grows with its content and
+// Shift+Enter inserts a line break instead of sending.
+const chatField = await page.evaluate(async () => {
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
+  root?.querySelector('[title="Ask AI"]')?.click();
+  await new Promise((r) => setTimeout(r, 300));
+  const field = root?.querySelector('[placeholder="Ask anything about this PR…"]');
+  return { tag: field?.tagName ?? null, initialHeight: field?.clientHeight ?? null };
+});
+await page.keyboard.type('a long question that should wrap onto another line when it runs out of horizontal room in the panel', { delay: 5 });
+const chatFieldAfter = await page.evaluate(async () => {
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
+  const field = root?.querySelector('[placeholder="Ask anything about this PR…"]');
+  return { grownHeight: field?.clientHeight ?? null, value: (field?.value ?? '').slice(0, 20) };
+});
+await page.keyboard.down('Shift');
+await page.keyboard.press('Enter');
+await page.keyboard.up('Shift');
+const chatNewline = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
+  const field = root?.querySelector('[placeholder="Ask anything about this PR…"]');
+  const value = field?.value ?? '';
+  // Reset for the later chat-keys probe.
+  return { endsWithNewline: value.endsWith('\n') };
+});
+await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
+  [...(root?.querySelectorAll('div,button,span') ?? [])]
+    .find((el) => el.textContent?.trim() === '✕')
+    ?.click();
+});
+await page.waitForTimeout(300);
+
 // One scan, two views: the default Review view hides the seeded SUGGESTION;
 // switching to Explain reveals it instantly — a lens change, not a re-scan.
 const explainView = await page.evaluate(async () => {
@@ -287,14 +340,14 @@ const autofocus = await page.evaluate(() => {
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
   return {
     valueAfterOpen:
-      root.querySelector('input[placeholder="Ask anything about this PR…"]')?.value ?? null,
+      root.querySelector('[placeholder="Ask anything about this PR…"]')?.value ?? null,
   };
 });
 
 // Coming back counts too: blur, click the panel chrome, type — still here.
 await page.evaluate(() => {
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
-  root.querySelector('input[placeholder="Ask anything about this PR…"]')?.blur();
+  root.querySelector('[placeholder="Ask anything about this PR…"]')?.blur();
   [...root.querySelectorAll('span')].find((el) => el.textContent === 'Chat')?.click();
 });
 await page.keyboard.type('yo', { delay: 20 });
@@ -302,7 +355,7 @@ const refocus = await page.evaluate(() => {
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
   return {
     valueAfterReturn:
-      root.querySelector('input[placeholder="Ask anything about this PR…"]')?.value ?? null,
+      root.querySelector('[placeholder="Ask anything about this PR…"]')?.value ?? null,
   };
 });
 
@@ -317,14 +370,14 @@ await page.evaluate(() => {
     if (!field) window.__leaked.push(e.key);
   });
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
-  const input = root.querySelector('input[placeholder="Ask anything about this PR…"]');
+  const input = root.querySelector('[placeholder="Ask anything about this PR…"]');
   input?.focus();
   input?.select();
 });
 await page.keyboard.type('a.t/', { delay: 30 });
 const chatKeys = await page.evaluate(() => {
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
-  const input = root.querySelector('input[placeholder="Ask anything about this PR…"]');
+  const input = root.querySelector('[placeholder="Ask anything about this PR…"]');
   const value = input?.value ?? null;
   // Close the panel so the badge screenshots below stay unobstructed.
   [...root.querySelectorAll('div,button,span')]
@@ -335,7 +388,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, pulse, explainView, filtered, autofocus, refocus, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, explainView, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
