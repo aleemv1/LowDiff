@@ -211,27 +211,27 @@ const popover = await page.evaluate(() => {
   };
 });
 
-// Stars breathe: unopened badges pulse; the active (opened) one holds still
-// so its enlarged state reads as selection, not animation.
-const pulse = await page.evaluate(() => {
-  const badges = [...document.querySelectorAll('[data-lowdiff-badge]')];
-  const names = badges.map((b) =>
-    b.firstElementChild instanceof HTMLElement
+// Stars breathe until read: unvisited badges pulse, the open one holds
+// still, and a badge stays still after its note is closed — the pulse
+// means "you have not looked at this yet".
+const pulse = await page.evaluate(async () => {
+  const settle = () => new Promise((r) => setTimeout(r, 150));
+  const byLine = (n) =>
+    [...document.querySelectorAll('[data-lowdiff-badge]')].find(
+      (b) => b.parentElement?.getAttribute('data-line-number') === n,
+    );
+  const anim = (b) =>
+    b?.firstElementChild instanceof HTMLElement
       ? getComputedStyle(b.firstElementChild).animationName
-      : null,
-  );
-  const active = badges.find(
-    (b) =>
-      b.firstElementChild instanceof HTMLElement &&
-      b.firstElementChild.style.transform.includes('scale'),
-  );
-  return {
-    names,
-    activeAnimation:
-      active && active.firstElementChild instanceof HTMLElement
-        ? getComputedStyle(active.firstElementChild).animationName
-        : null,
-  };
+      : null;
+  const whileOpen = { active: anim(byLine('4')), other: anim(byLine('3')) };
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  [...root.querySelectorAll('div,button,span')]
+    .find((el) => el.textContent?.trim() === '✕')
+    ?.click();
+  await settle();
+  const afterClose = { visited: anim(byLine('4')), unvisited: anim(byLine('3')) };
+  return { whileOpen, afterClose };
 });
 
 // One scan, two views: the default Review view hides the seeded SUGGESTION;

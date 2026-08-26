@@ -41,6 +41,16 @@ export interface BadgeTarget {
  * added to the page could leak onto their markup.
  */
 const STYLE_ID = 'lowdiff-badge-style';
+const VISITED_ATTR = 'data-lowdiff-visited';
+
+/**
+ * The pulse means "you have not looked at this yet", so it ends for good at
+ * the first click. Keyed off the note, not the element — badges are torn
+ * down and rebuilt whenever the rendered diff changes.
+ */
+const visited = new Set<string>();
+const noteKey = (note: Note): string =>
+  `${note.kind}:${note.anchor.path}:${note.anchor.line}:${note.title}`;
 
 /**
  * Badges are styled inline, but a pulse needs @keyframes, which cannot be
@@ -57,6 +67,7 @@ function ensureBadgeStyle(): void {
   50% { transform: scale(1.15); }
 }
 [${BADGE_ATTR}] > span { animation: lowdiff-pulse 2.4s ease-in-out infinite; }
+[${BADGE_ATTR}][${VISITED_ATTR}] > span { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   [${BADGE_ATTR}] > span { animation: none; }
 }
@@ -93,9 +104,12 @@ export function syncBadges(
       if (!target) continue;
 
       const badge = createBadge(note);
+      if (visited.has(noteKey(note))) badge.setAttribute(VISITED_ATTR, '');
       badge.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
+        visited.add(noteKey(note));
+        badge.setAttribute(VISITED_ATTR, '');
         onSelect({ note, element: badge });
       });
       // Clicking would focus the badge (it is tabbable), and focusing makes
