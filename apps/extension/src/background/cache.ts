@@ -13,7 +13,7 @@ export interface CachedReview {
  * review outlives the prompt that produced it — without this, users keep
  * seeing old-style output for any PR whose head commit has not moved.
  */
-const PREFIX = 'lowdiff:review:v7:';
+const PREFIX = 'lowdiff:review:v8:';
 const MAX_ENTRIES = 50;
 
 function key(owner: string, repo: string, number: number, headSha: string): string {

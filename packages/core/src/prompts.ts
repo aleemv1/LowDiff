@@ -28,6 +28,9 @@ Writing rules:
 - body: may use fenced code blocks, \`backticks\`, and dash lists — all are
   rendered. When a body covers more than one case or step, break it into a
   short list instead of packing everything into one paragraph.
+- Wrap code identifiers — function names, flags, globs, paths — in
+  backticks everywhere, the summary included: a bare fnmatch reads as prose,
+  \`fnmatch\` reads as code.
 - code: only when you can give a concrete fix. Prefer the narrowest change
   that resolves the finding over a rewrite — if one token, flag, or line fixes
   it, show exactly that. Omit it otherwise.

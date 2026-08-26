@@ -42,6 +42,10 @@ describe('systemPrompt', () => {
     expect(systemPrompt()).toMatch(/false alarm costs more/);
   });
 
+  it('wants identifiers in backticks, in the summary too', () => {
+    expect(systemPrompt()).toMatch(/backticks everywhere, the summary included/);
+  });
+
   it('forbids citing unseen lines', () => {
     expect(systemPrompt()).toMatch(/Never cite a line you were not shown/);
   });
