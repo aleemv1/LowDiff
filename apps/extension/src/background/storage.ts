@@ -26,7 +26,10 @@ export function toPublicSettings(settings: Settings): PublicSettings {
     provider: settings.provider,
     ...(settings.model !== undefined ? { model: settings.model } : {}),
     defaultMode: settings.defaultMode,
-    configured: Boolean(settings.keys[settings.provider]),
+    configured:
+      Boolean(settings.keys[settings.provider]) ||
+      (settings.provider === 'google' && Boolean(settings.googleAccount)) ||
+      (settings.provider === 'openai' && Boolean(settings.openaiTokens)),
     hiddenKinds: settings.hiddenKinds ?? [],
   };
 }

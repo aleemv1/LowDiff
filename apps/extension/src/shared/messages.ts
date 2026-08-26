@@ -9,6 +9,20 @@ export interface Settings {
   daemonToken?: string | undefined;
   /** Set per provider; never leaves the service worker. */
   keys: Partial<Record<ProviderId, string>>;
+  /**
+   * Bill the Google account connected via chrome.identity instead of a key.
+   * Tokens are minted on demand and never stored by LowDiff.
+   */
+  googleAccount?: boolean | undefined;
+  /**
+   * OAuth client id for OpenAI's device-code flow. Third-party access is
+   * gated on OpenAI's approval, so this stays empty for most users.
+   */
+  openaiClientId?: string | undefined;
+  /** Tokens from the OpenAI device flow; refreshed in the worker. */
+  openaiTokens?:
+    | { accessToken: string; refreshToken: string; expiresAt: number }
+    | undefined;
   defaultMode: Mode;
   /**
    * Note kinds hidden from the overlay. Stored as the negative so new kinds

@@ -6,6 +6,8 @@ import type { Mode } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
+import type { DeviceStart } from '../background/oauth.js';
+import { googleToken, pollOpenAiDeviceFlow, startOpenAiDeviceFlow } from '../background/oauth.js';
 import { C, STYLES } from '../content/theme.js';
 
 // The C tokens are var(--ld-*) references declared under :host for the shadow
@@ -65,13 +67,13 @@ const PROVIDERS: { id: ProviderId; label: string; keyUrl: string; note: string }
     id: 'google',
     label: 'Google',
     keyUrl: 'https://aistudio.google.com/apikey',
-    note: 'API key, or connect a Google account (the one provider with a usable OAuth path).',
+    note: 'API key, or connect your Google account below — no key needed.',
   },
 ];
 
 const STEPS: { title: string; detail: string }[] = [
   { title: 'Pick a provider', detail: 'Anthropic, OpenAI, or Google' },
-  { title: 'Paste an API key', detail: 'Created in your provider console — one click away' },
+  { title: 'Paste a key — or link an account', detail: 'API key from your provider console, or connect Google with no key at all' },
   { title: 'Open any pull request', detail: 'The review card and ✦ badges appear on the diff' },
 ];
 
@@ -79,6 +81,8 @@ function Options() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [advanced, setAdvanced] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [device, setDevice] = useState<DeviceStart | null>(null);
   const saveTimer = useRef<number | undefined>(undefined);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -105,6 +109,40 @@ function Options() {
   };
 
   const active = PROVIDERS.find((p) => p.id === settings.provider)!;
+
+  const connectGoogle = async () => {
+    setAuthError(null);
+    const token = await googleToken(true);
+    if (token) update({ googleAccount: true });
+    else
+      setAuthError(
+        'Google sign-in failed. Create an OAuth client of type "Chrome Extension" in Google ' +
+          'Cloud console and put its id in manifest.json under oauth2.client_id, then reload.',
+      );
+  };
+
+  const connectOpenAi = async () => {
+    const clientId = settings.openaiClientId;
+    if (!clientId) return;
+    setAuthError(null);
+    try {
+      const start = await startOpenAiDeviceFlow(clientId);
+      setDevice(start);
+      for (;;) {
+        await new Promise((r) => setTimeout(r, start.interval * 1000));
+        const poll = await pollOpenAiDeviceFlow(clientId, start.deviceCode);
+        if (poll.status === 'done') {
+          const { status: _status, ...tokens } = poll;
+          update({ openaiTokens: tokens });
+          break;
+        }
+      }
+    } catch (cause) {
+      setAuthError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setDevice(null);
+    }
+  };
 
   const field = {
     width: '100%', padding: '9px 11px', borderRadius: '8px',
@@ -233,6 +271,71 @@ function Options() {
           Create a key on {active.label} ↗
         </a>
 
+        {settings.provider === 'google' && (
+          <div style={{ marginTop: '14px' }}>
+            {settings.googleAccount ? (
+              <span style={{ font: `600 12px 'DM Sans',sans-serif`, color: '#1a7f37' }}>
+                ✓ Google account connected
+                <span
+                  onClick={() => update({ googleAccount: false })}
+                  style={{ color: C.muted, cursor: 'pointer', marginLeft: '12px', fontWeight: 500 }}
+                >
+                  Disconnect
+                </span>
+              </span>
+            ) : (
+              <button
+                onClick={() => void connectGoogle()}
+                style={{
+                  background: C.accent, color: '#fff', border: 'none', borderRadius: '999px',
+                  padding: '8px 16px', font: `600 12px 'DM Sans',sans-serif`, cursor: 'pointer',
+                }}
+              >
+                Connect Google account — no API key needed
+              </button>
+            )}
+          </div>
+        )}
+
+        {settings.provider === 'openai' && (
+          <div style={{ marginTop: '14px' }}>
+            {settings.openaiTokens ? (
+              <span style={{ font: `600 12px 'DM Sans',sans-serif`, color: '#1a7f37' }}>
+                ✓ OpenAI account connected
+                <span
+                  onClick={() => update({ openaiTokens: undefined })}
+                  style={{ color: C.muted, cursor: 'pointer', marginLeft: '12px', fontWeight: 500 }}
+                >
+                  Disconnect
+                </span>
+              </span>
+            ) : device ? (
+              <p style={{ font: `12.5px/1.6 'DM Sans',sans-serif`, color: C.ink, margin: 0 }}>
+                Enter code <b>{device.userCode}</b> at{' '}
+                <a href={device.verificationUri} target="_blank" rel="noreferrer" style={{ color: C.accentDark }}>
+                  {device.verificationUri}
+                </a>{' '}
+                — waiting for approval…
+              </p>
+            ) : settings.openaiClientId ? (
+              <button
+                onClick={() => void connectOpenAi()}
+                style={{
+                  background: C.accent, color: '#fff', border: 'none', borderRadius: '999px',
+                  padding: '8px 16px', font: `600 12px 'DM Sans',sans-serif`, cursor: 'pointer',
+                }}
+              >
+                Sign in with ChatGPT (device code)
+              </button>
+            ) : (
+              <p style={help}>
+                Plan sign-in needs an OpenAI-approved OAuth client id — set one under Advanced.
+              </p>
+            )}
+          </div>
+        )}
+        {authError && <p style={help}>{authError}</p>}
+
         <label style={label}>DEFAULT MODE</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['review', 'explain'] as Mode[]).map((m) => (
@@ -286,6 +389,18 @@ function Options() {
             <p style={help}>
               Run <code>npm run daemon</code> in the LowDiff repo and paste the token it prints.
               Without it, chat sees only the pull request.
+            </p>
+
+            <label style={label}>OPENAI OAUTH CLIENT ID (OPTIONAL)</label>
+            <input
+              value={settings.openaiClientId ?? ''}
+              placeholder="Enables ChatGPT plan sign-in instead of a key"
+              onInput={(e) => update({ openaiClientId: (e.target as HTMLInputElement).value || undefined })}
+              style={field}
+            />
+            <p style={help}>
+              OpenAI approves third-party device-code clients case by case; without an approved
+              id this stays a key-only provider.
             </p>
           </div>
         )}

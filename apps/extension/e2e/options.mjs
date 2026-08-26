@@ -89,12 +89,25 @@ const autosave = await page.evaluate(async () => {
   };
 });
 
+// Account linking: selecting Google offers a connect button instead of
+// demanding a key.
+await page.evaluate(() => {
+  [...document.querySelectorAll('button')].find((b) => b.textContent === 'Google')?.click();
+});
+await page.waitForTimeout(300);
+const account = await page.evaluate(() => ({
+  connectButton: [...document.querySelectorAll('button')].some((b) =>
+    b.textContent?.includes('Connect Google account'),
+  ),
+}));
+
 const pass = {
   inputHasBorder: state.inputBorderStyle === 'solid',
   tokensResolve: state.activeProviderBorder === 'rgb(91, 91, 214)',
   guidedLanding:
     landing.hasSteps && landing.hasWordmark && landing.advancedCollapsed && !landing.hasSaveButton,
   autosave: autosave.persistedKey === 'sk-test-autosave' && autosave.toastShown,
+  accountLinking: account.connectButton,
   scaledLayout:
     scale.contentWidth >= 1000 &&
     Math.abs(scale.leftGap - scale.rightGap) <= 40 &&
@@ -109,7 +122,7 @@ if (shotAt !== -1) {
   console.log(`screenshot → ${process.argv[shotAt + 1]}`);
 }
 
-console.log(JSON.stringify({ ...state, landing, scale, autosave, pass }, null, 2));
+console.log(JSON.stringify({ ...state, landing, scale, autosave, account, pass }, null, 2));
 if (Object.values(pass).some((p) => !p)) process.exitCode = 1;
 
 await context.close();

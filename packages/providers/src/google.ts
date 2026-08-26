@@ -25,10 +25,19 @@ export class GoogleClient implements LlmClient {
 
   constructor(config: ProviderConfig) {
     this.model = config.model ?? DEFAULT_MODELS.google;
+    // An account token is not an API key: the API takes it in an
+    // Authorization header, and sending it as x-goog-api-key is rejected.
+    // The SDK insists on an apiKey option, so pass a placeholder and carry
+    // the real credential in headers.
     this.client =
       config.auth.kind === 'apiKey'
         ? new GoogleGenAI({ apiKey: config.auth.key })
-        : new GoogleGenAI({ apiKey: config.auth.accessToken });
+        : new GoogleGenAI({
+            apiKey: 'unused-oauth-placeholder',
+            httpOptions: {
+              headers: { Authorization: `Bearer ${config.auth.accessToken}` },
+            },
+          });
   }
 
   async annotate(req: AnnotateRequest): Promise<AnnotateResponse> {
