@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseBlocks, parseSpans } from '../src/content/markdown.js';
+import { dedent } from '../src/content/components/CodeBlock.js';
 
 describe('parseBlocks', () => {
   it('returns a single text block for plain prose', () => {
@@ -129,5 +130,23 @@ describe('parseSpans: bold', () => {
   it('mixes bold and code in one line', () => {
     const kinds = parseSpans('**note**: `x` differs').map((s) => s.type);
     expect(kinds).toEqual(['bold', 'plain', 'code', 'plain']);
+  });
+});
+
+describe('dedent', () => {
+  it('strips the indentation common to every line', () => {
+    expect(dedent('        else:\n            cls = x')).toBe('else:\n    cls = x');
+  });
+
+  it('ignores blank lines when measuring the common indent', () => {
+    expect(dedent('    a\n\n      b')).toBe('a\n\n  b');
+  });
+
+  it('trims leading and trailing blank lines', () => {
+    expect(dedent('\n    a\n    b\n\n')).toBe('a\nb');
+  });
+
+  it('leaves already-flush code alone', () => {
+    expect(dedent('a\n  b')).toBe('a\n  b');
   });
 });

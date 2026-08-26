@@ -72,6 +72,21 @@ function renderTokens(tokens: (string | Prism.Token)[]): ComponentChildren[] {
   });
 }
 
+/**
+ * Strip the indentation every line shares, plus blank edges. Model snippets
+ * keep the diff's original nesting, and sixteen spaces of lead-in wastes most
+ * of a 440px popover before the code starts.
+ */
+export function dedent(code: string): string {
+  const trimmed = code.replace(/^(?:[ \t]*\n)+/, '').replace(/(?:\n[ \t]*)+$/, '');
+  const lines = trimmed.split('\n');
+  const indents = lines
+    .filter((line) => line.trim().length > 0)
+    .map((line) => /^[ \t]*/.exec(line)![0].length);
+  const common = indents.length > 0 ? Math.min(...indents) : 0;
+  return common === 0 ? trimmed : lines.map((line) => line.slice(common)).join('\n');
+}
+
 interface Props {
   code: string;
   lang: string;
@@ -81,13 +96,14 @@ export function CodeBlock({ code, lang }: Props) {
   const [copied, setCopied] = useState(false);
   const resolved = ALIASES[lang] ?? lang;
   const grammar = resolved ? Prism.languages[resolved] : undefined;
+  const flush = dedent(code);
 
   const body = grammar
-    ? renderTokens(Prism.tokenize(code, grammar))
-    : code;
+    ? renderTokens(Prism.tokenize(flush, grammar))
+    : flush;
 
   const copy = () => {
-    void navigator.clipboard.writeText(code).then(() => {
+    void navigator.clipboard.writeText(flush).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     });
