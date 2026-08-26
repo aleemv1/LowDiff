@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
-import { C, KIND_STYLE, glowFor } from '../theme.js';
+import { C, KIND_STYLE } from '../theme.js';
 import { Sparkle } from './Sparkle.js';
 import { Markdown } from './Markdown.js';
 
@@ -12,7 +12,6 @@ interface Props {
   busy: boolean;
   onMode: (mode: Mode) => void;
   onRefresh: () => void;
-  onJump: (kind: NoteKind) => void;
 }
 
 const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
@@ -35,10 +34,6 @@ function counts(notes: Note[]): [NoteKind, number][] {
 
 export function SummaryCard(props: Props) {
   const [open, setOpen] = useState(true);
-  // Chips glow like unopened badges until their first click, so the jump
-  // affordance is discoverable without a label.
-  const [jumped, setJumped] = useState<Partial<Record<NoteKind, true>>>({});
-
 
   return (
     <div
@@ -71,24 +66,13 @@ export function SummaryCard(props: Props) {
 
         <span style={{ display: 'flex', gap: '6px', marginLeft: '8px', flexWrap: 'wrap' }}>
           {counts(props.notes).map(([kind, n]) => (
-            <button
+            <span
               key={kind}
               class="pill"
-              onClick={() => {
-                setJumped((prev) => ({ ...prev, [kind]: true }));
-                props.onJump(kind);
-              }}
-              title={`Jump to the next ${LABEL[kind]!.one} badge in the diff`}
-              style={{
-                background: KIND_STYLE[kind]!.headBg,
-                color: KIND_STYLE[kind]!.color,
-                border: '1px solid color-mix(in srgb, currentColor 40%, transparent)',
-                cursor: 'pointer',
-                boxShadow: jumped[kind] ? 'none' : glowFor(KIND_STYLE[kind]!.color),
-              }}
+              style={{ background: KIND_STYLE[kind]!.headBg, color: KIND_STYLE[kind]!.color }}
             >
-              {n} {n === 1 ? LABEL[kind]!.one : LABEL[kind]!.many} ↓
-            </button>
+              {n} {n === 1 ? LABEL[kind]!.one : LABEL[kind]!.many}
+            </span>
           ))}
           {props.notes.length === 0 && !props.busy && (
             <span class="pill" style={{ background: '#e9f8ec', color: '#1a7f37' }}>
@@ -156,7 +140,7 @@ export function SummaryCard(props: Props) {
                 {props.notes.length > 0 && (
                   <span style={{ color: C.muted, font: '12px/1.5 inherit' }}>
                     <span style={{ color: C.accentDark }}>✦</span>{' '}
-                    Click a count to jump, or any badge in the diff.
+                    Click a badge in the diff for the note on that line.
                   </span>
                 )}
                 {props.cached && (

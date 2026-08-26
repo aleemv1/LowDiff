@@ -211,36 +211,6 @@ const popover = await page.evaluate(() => {
   };
 });
 
-// Chip → badge navigation: clicking a count jumps to that kind's next badge,
-// shown by the active glow; a second click cycles to the following one.
-const jump = await page.evaluate(async () => {
-  // Preact re-renders async, so give each click a beat before reading styles.
-  const settle = () => new Promise((r) => setTimeout(r, 60));
-  const host = document.getElementById('lowdiff-root');
-  const chips = [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])];
-  const chip = chips.find((b) => /risk/.test(b.textContent ?? ''));
-  const security = chips.find((b) => /security/.test(b.textContent ?? ''));
-  // An unvisited chip glows like an unopened badge; its first click quiets it.
-  const glowing = (b) => Boolean(b) && getComputedStyle(b).boxShadow !== 'none';
-  const glowBefore = { security: glowing(security), risk: glowing(chip) };
-  const activeLine = () =>
-    [...document.querySelectorAll('[data-lowdiff-badge]')]
-      .find(
-        (b) =>
-          b.firstElementChild instanceof HTMLElement &&
-          b.firstElementChild.style.transform.includes('scale'),
-      )
-      ?.parentElement?.getAttribute('data-line-number') ?? null;
-  chip?.click();
-  await settle();
-  const first = activeLine();
-  chip?.click();
-  await settle();
-  const second = activeLine();
-  const glowAfter = { security: glowing(security), risk: glowing(chip) };
-  return { chipFound: Boolean(chip), glowBefore, glowAfter, first, second };
-});
-
 // One scan, two views: the default Review view hides the seeded SUGGESTION;
 // switching to Explain reveals it instantly — a lens change, not a re-scan.
 const explainView = await page.evaluate(async () => {
@@ -313,7 +283,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, jump, explainView, filtered, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, explainView, filtered, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
