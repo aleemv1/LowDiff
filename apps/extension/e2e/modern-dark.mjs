@@ -250,6 +250,24 @@ const jump = await page.evaluate(async () => {
   return { chipFound: Boolean(chip), glowBefore, glowAfter, first, second };
 });
 
+// On a wide card the empty right side carries the findings list — one
+// clickable row per visible note, jumping to its badge.
+const sideList = await page.evaluate(async () => {
+  const host = document.getElementById('lowdiff-root');
+  const rows = [...(host?.shadowRoot?.querySelectorAll('[data-lowdiff-finding]') ?? [])];
+  rows.find((r) => r.textContent?.includes('every push'))?.click();
+  await new Promise((r) => setTimeout(r, 150));
+  const activeLine =
+    [...document.querySelectorAll('[data-lowdiff-badge]')]
+      .find(
+        (b) =>
+          b.firstElementChild instanceof HTMLElement &&
+          b.firstElementChild.style.transform.includes('scale'),
+      )
+      ?.parentElement?.getAttribute('data-line-number') ?? null;
+  return { rows: rows.length, activeLine };
+});
+
 // One scan, two views: the default Review view hides the seeded SUGGESTION;
 // switching to Explain reveals it instantly — a lens change, not a re-scan.
 const explainView = await page.evaluate(async () => {
@@ -321,7 +339,9 @@ const chatKeys = await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 
-console.log(JSON.stringify({ ...state, popover, jump, explainView, filtered, chatKeys }, null, 2));
+console.log(
+  JSON.stringify({ ...state, popover, jump, sideList, explainView, filtered, chatKeys }, null, 2),
+);
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 
