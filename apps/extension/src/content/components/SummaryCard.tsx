@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import type { Mode, Note, NoteKind } from '@lowdiff/core';
 import { C, KIND_STYLE, glowFor } from '../theme.js';
 import { Sparkle } from './Sparkle.js';
@@ -13,7 +13,6 @@ interface Props {
   onMode: (mode: Mode) => void;
   onRefresh: () => void;
   onJump: (kind: NoteKind) => void;
-  onJumpNote: (note: Note) => void;
 }
 
 const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
@@ -40,23 +39,9 @@ export function SummaryCard(props: Props) {
   // affordance is discoverable without a label.
   const [jumped, setJumped] = useState<Partial<Record<NoteKind, true>>>({});
 
-  // On a wide card, the space to the right of the capped summary carries the
-  // findings list instead of sitting empty.
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() =>
-      setWide(el.getBoundingClientRect().width >= 1000),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <div
-      ref={cardRef}
       style={{
         border: `1px solid ${C.accentBorder}`,
         borderRadius: '12px',
@@ -150,14 +135,12 @@ export function SummaryCard(props: Props) {
       {open && (
         <div
           style={{
-            display: 'flex', gap: '40px', alignItems: 'flex-start',
             padding: '0 16px 14px 52px',
             font: `13px/1.65 'DM Sans',sans-serif`,
             color: C.body,
           }}
         >
-          {/* The prose fills everything up to the findings list. */}
-          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+          <div>
             {props.busy && props.notes.length === 0 ? (
               'Reading the diff…'
             ) : (
@@ -189,49 +172,6 @@ export function SummaryCard(props: Props) {
             )}
           </div>
 
-          {wide && props.notes.length > 0 && (
-            <div
-              style={{
-                flex: '0 1 460px', minWidth: '300px',
-                borderLeft: `1px solid ${C.line}`, padding: '2px 0 0 24px',
-              }}
-            >
-              {props.notes.map((note) => (
-                <div
-                  key={`${note.anchor.path}:${note.anchor.line}:${note.title}`}
-                  data-lowdiff-finding
-                  onClick={() => props.onJumpNote(note)}
-                  title={`Jump to ${note.anchor.path}:${note.anchor.line}`}
-                  style={{
-                    display: 'flex', alignItems: 'baseline', gap: '10px',
-                    padding: '4px 0', cursor: 'pointer',
-                    font: `12.5px/1.45 'DM Sans',sans-serif`,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '8px', height: '8px', borderRadius: '50%', flex: 'none',
-                      background: KIND_STYLE[note.kind]!.color, transform: 'translateY(-1px)',
-                    }}
-                  />
-                  <span
-                    style={{
-                      color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {note.title}
-                  </span>
-                  <span
-                    class="mono"
-                    style={{ marginLeft: 'auto', color: C.faint, fontSize: '11px', whiteSpace: 'nowrap' }}
-                  >
-                    {note.anchor.path.split('/').pop()}:{note.anchor.line}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

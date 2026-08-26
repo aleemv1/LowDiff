@@ -180,13 +180,6 @@ const state = await page.evaluate(() => {
       tag: p.tagName,
       text: p.textContent?.trim(),
     })),
-    // The prose block must reach the findings rail: gap ≈ the flex gutter.
-    proseToRailGap: (() => {
-      const prose = card?.querySelector('p')?.parentElement ?? null;
-      const rail = card?.querySelector('[data-lowdiff-finding]')?.parentElement ?? null;
-      if (!prose || !rail) return null;
-      return Math.round(rail.getBoundingClientRect().left - prose.getBoundingClientRect().right);
-    })(),
     hint: (() => {
       const el = [...(card?.querySelectorAll('span, b') ?? [])].find((s) =>
         (s.textContent ?? '').includes('badge'),
@@ -246,24 +239,6 @@ const jump = await page.evaluate(async () => {
   const second = activeLine();
   const glowAfter = { security: glowing(security), risk: glowing(chip) };
   return { chipFound: Boolean(chip), glowBefore, glowAfter, first, second };
-});
-
-// On a wide card the empty right side carries the findings list — one
-// clickable row per visible note, jumping to its badge.
-const sideList = await page.evaluate(async () => {
-  const host = document.getElementById('lowdiff-root');
-  const rows = [...(host?.shadowRoot?.querySelectorAll('[data-lowdiff-finding]') ?? [])];
-  rows.find((r) => r.textContent?.includes('every push'))?.click();
-  await new Promise((r) => setTimeout(r, 150));
-  const activeLine =
-    [...document.querySelectorAll('[data-lowdiff-badge]')]
-      .find(
-        (b) =>
-          b.firstElementChild instanceof HTMLElement &&
-          b.firstElementChild.style.transform.includes('scale'),
-      )
-      ?.parentElement?.getAttribute('data-line-number') ?? null;
-  return { rows: rows.length, activeLine };
 });
 
 // One scan, two views: the default Review view hides the seeded SUGGESTION;
@@ -338,7 +313,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, jump, sideList, explainView, filtered, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, jump, explainView, filtered, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);

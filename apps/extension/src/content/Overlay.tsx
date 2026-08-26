@@ -174,20 +174,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
     [closePopover],
   );
 
-  /** Jump straight to one note's badge, matched by the tooltip it carries. */
-  const jumpToNote = useCallback(
-    (note: Note) => {
-      const badge = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')].find(
-        (b) => b.title === `${note.kind}: ${note.title}`,
-      );
-      if (!badge) return;
-      closePopover();
-      badge.scrollIntoView({ block: 'center' });
-      setActiveBadge(badge);
-    },
-    [closePopover],
-  );
-
   /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {
     if (visibleNotes.length === 0) {
@@ -434,7 +420,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         }}
         onRefresh={() => void run(true)}
         onJump={jump}
-        onJumpNote={jumpToNote}
       />
 
       {explainOnly > 0 && !busy && (
