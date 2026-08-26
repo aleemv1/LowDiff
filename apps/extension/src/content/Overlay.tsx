@@ -459,7 +459,19 @@ export function Overlay({ pr, overlayRoot }: Props) {
       )}
 
       {createPortal(
-        <>
+        /*
+         * Keys typed in the floating UI must die here. They bubble out of the
+         * shadow root retargeted to the host <div>, so GitHub's document-level
+         * hotkey guard ("ignore events from form fields") does not recognise
+         * the chat input — a "." mid-sentence launches github.dev, a "/"
+         * steals focus to search, and the reviewer's text is cut off.
+         */
+        <div
+          style={{ display: 'contents' }}
+          onKeyDown={(e) => e.stopPropagation()}
+          onKeyUp={(e) => e.stopPropagation()}
+          onKeyPress={(e) => e.stopPropagation()}
+        >
       {open && (
         <div
           ref={popoverRef}
@@ -519,7 +531,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
           <Sparkle size={22} />
         </div>
       )}
-        </>,
+        </div>,
         overlayRoot,
       )}
     </div>

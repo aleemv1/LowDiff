@@ -286,7 +286,42 @@ const filtered = await page.evaluate(() => {
   };
 });
 
-console.log(JSON.stringify({ ...state, popover, jump, explainView, filtered }, null, 2));
+// Keys typed in the chat input must not reach the page. Shadow retargeting
+// makes them look to document-level listeners like they come from a plain
+// <div>, so GitHub's "ignore form fields" hotkey guard does not apply — a
+// "." mid-sentence would launch github.dev and a "/" would steal focus.
+await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  root.querySelector('[title="Ask AI"]')?.click();
+});
+await page.waitForTimeout(500);
+await page.evaluate(() => {
+  window.__leaked = [];
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    const field =
+      t instanceof HTMLInputElement ||
+      t instanceof HTMLTextAreaElement ||
+      (t instanceof HTMLElement && t.isContentEditable);
+    if (!field) window.__leaked.push(e.key);
+  });
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  root.querySelector('input[placeholder="Ask anything about this PR…"]')?.focus();
+});
+await page.keyboard.type('a.t/', { delay: 30 });
+const chatKeys = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
+  const input = root.querySelector('input[placeholder="Ask anything about this PR…"]');
+  const value = input?.value ?? null;
+  // Close the panel so the badge screenshots below stay unobstructed.
+  [...root.querySelectorAll('div,button,span')]
+    .find((el) => el.textContent?.trim() === '✕')
+    ?.click();
+  return { leakedToPage: window.__leaked, inputValue: value };
+});
+await page.waitForTimeout(300);
+
+console.log(JSON.stringify({ ...state, popover, jump, explainView, filtered, chatKeys }, null, 2));
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 
