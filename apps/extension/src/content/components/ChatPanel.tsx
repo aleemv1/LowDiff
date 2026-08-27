@@ -46,8 +46,15 @@ export function ChatPanel(props: Props) {
         // route stray clicks to the input, but never over a control click or
         // a text selection in the transcript.
         const target = e.target;
-        if (target instanceof HTMLElement && target.closest('button, a, input')) return;
-        const selection = window.getSelection();
+        if (target instanceof HTMLElement && target.closest('button, a, input, textarea')) return;
+        // window.getSelection() cannot see into a shadow root — it reports
+        // collapsed, so finishing a highlight refocused the input and Chrome
+        // wiped the selection. Ask the shadow root itself.
+        const rootNode = target instanceof Node ? target.getRootNode() : null;
+        const selection =
+          rootNode instanceof ShadowRoot && 'getSelection' in rootNode
+            ? (rootNode as ShadowRoot & { getSelection(): Selection | null }).getSelection()
+            : window.getSelection();
         if (selection && !selection.isCollapsed) return;
         inputRef.current?.focus();
       }}
