@@ -1,0 +1,4 @@
+# Every path in the repository requires the owner's review before a PR
+# touching it can merge (once "Require review from Code Owners" is enabled
+# in branch protection — CODEOWNERS alone only auto-requests the review).
+* @aleemv1
