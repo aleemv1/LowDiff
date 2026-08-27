@@ -66,10 +66,10 @@ function ensureBadgeStyle(): void {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
 }
-[${BADGE_ATTR}] > span { animation: lowdiff-pulse 2.4s ease-in-out infinite; }
-[${BADGE_ATTR}][${VISITED_ATTR}] > span { animation: none; }
+[${BADGE_ATTR}] > span > span { animation: lowdiff-pulse 2.4s ease-in-out infinite; }
+[${BADGE_ATTR}][${VISITED_ATTR}] > span > span { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  [${BADGE_ATTR}] > span { animation: none; }
+  [${BADGE_ATTR}] > span > span { animation: none; }
 }
 `;
   document.head.append(style);
@@ -179,8 +179,8 @@ export function setActiveBadge(active: HTMLElement | null): void {
   for (const el of document.querySelectorAll<HTMLElement>(`[${BADGE_ATTR}]`)) {
     const color = kindColor(el.getAttribute('data-lowdiff-kind') ?? 'EXPLAIN');
     const on = el === active;
-    // The outer element is only the hit area; paint the inner dot.
-    const visual = el.firstElementChild;
+    // The anchor holds the hit area, which holds the dot; paint the dot.
+    const visual = el.firstElementChild?.firstElementChild;
     if (!(visual instanceof HTMLElement)) continue;
     visual.style.background = on ? ACCENT : 'var(--bgColor-default, #fff)';
     visual.style.color = on ? '#fff' : color;
@@ -200,22 +200,36 @@ function createBadge(note: Note): HTMLElement {
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.title = `${note.kind}: ${note.title}`;
-  // Two elements: the clickable hit area and the 15px visual dot inside it.
-  // Inline-flex in normal flow — an absolutely positioned badge inside
-  // GitHub's cells re-based on whichever ancestor happened to be positioned,
-  // and a block-shaped one forced the code onto its own line.
+  // Three elements: a 0×0 inline anchor at the end of the text, a clickable
+  // hit area hung off it absolutely, and the visual dot inside that. A badge
+  // with real width is a word to the line-wrapper — end a line near the cell
+  // edge and the star wrapped onto its own visual line. Zero size cannot
+  // wrap and cannot move layout; the dot floats beside the final character.
   Object.assign(badge.style, {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    verticalAlign: 'middle',
-    marginLeft: '10px',
-    width: '20px',
-    height: '18px',
-    cursor: 'pointer',
+    display: 'inline-block',
+    width: '0',
+    height: '0',
+    overflow: 'visible',
+    position: 'relative',
+    verticalAlign: 'baseline',
     userSelect: 'none',
     whiteSpace: 'normal',
   } satisfies Partial<CSSStyleDeclaration>);
+
+  const hit = document.createElement('span');
+  Object.assign(hit.style, {
+    position: 'absolute',
+    left: '3px',
+    top: '-19px',
+    width: '24px',
+    height: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: '3',
+  } satisfies Partial<CSSStyleDeclaration>);
+  badge.append(hit);
 
   const visual = document.createElement('span');
   visual.innerHTML = SPARKLE_SVG; // static constant, never model data
@@ -234,6 +248,6 @@ function createBadge(note: Note): HTMLElement {
     lineHeight: '1',
     pointerEvents: 'none',
   } satisfies Partial<CSSStyleDeclaration>);
-  badge.append(visual);
+  hit.append(visual);
   return badge;
 }

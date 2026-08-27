@@ -278,10 +278,10 @@ describe('badge placement in the gutter', () => {
     expect(badge.parentElement!.className).toContain('blob-code-inner');
   });
 
-  it('flows inline so it cannot disturb the row layout', () => {
-    // Absolute positioning in the code cell re-bases on whatever GitHub
-    // ancestor happens to be positioned; an inline-flex marker after the
-    // text has no layout opinion at all.
+  it('anchors with zero width so text wrapping cannot move it', () => {
+    // A badge with real width is a word to the wrapper: end a line near the
+    // cell edge and the star wrapped onto its own visual line. A 0×0 inline
+    // anchor cannot wrap; the visible dot hangs off it absolutely.
     document.documentElement.innerHTML = FIXTURE;
     clearBadges();
     syncBadges(
@@ -290,7 +290,9 @@ describe('badge placement in the gutter', () => {
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]') as HTMLElement;
-    expect(badge.style.position).not.toBe('absolute');
-    expect(badge.style.display).toBe('inline-flex');
+    expect(badge.style.width).toBe('0px');
+    expect(badge.style.display).toBe('inline-block');
+    const hit = badge.firstElementChild as HTMLElement;
+    expect(hit.style.position).toBe('absolute');
   });
 });

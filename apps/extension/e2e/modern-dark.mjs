@@ -146,6 +146,17 @@ await page.waitForTimeout(2500);
 await page.evaluate(() => document.querySelector('table[role="grid"]')?.scrollIntoView({ block: 'center' }));
 await page.waitForTimeout(400);
 
+// Line 1 wraps to three visual lines; its badge must not add a fourth.
+const wrap = await page.evaluate(() => {
+  const cellOf = (n) =>
+    [...document.querySelectorAll('[data-line-anchor]')].find(
+      (c) => c.getAttribute('data-line-number') === n,
+    );
+  const wrapped = cellOf('1')?.getBoundingClientRect();
+  const single = cellOf('3')?.getBoundingClientRect();
+  return wrapped && single ? { lineBoxes: Math.round(wrapped.height / single.height) } : null;
+});
+
 const state = await page.evaluate(() => {
   const host = document.getElementById('lowdiff-root');
   const badges = [...document.querySelectorAll('[data-lowdiff-badge]')];
@@ -179,6 +190,7 @@ const state = await page.evaluate(() => {
     ),
     badgeLines: badges.map((b) => b.parentElement?.getAttribute('data-line-number')),
     cardBackground: cardBg,
+    cardText: (card?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 160),
     countChips: [...(card?.querySelectorAll('.pill') ?? [])].map((p) => ({
       tag: p.tagName,
       text: p.textContent?.trim(),
@@ -229,10 +241,10 @@ const pulse = await page.evaluate(async () => {
     [...document.querySelectorAll('[data-lowdiff-badge]')].find(
       (b) => b.parentElement?.getAttribute('data-line-number') === n,
     );
-  const anim = (b) =>
-    b?.firstElementChild instanceof HTMLElement
-      ? getComputedStyle(b.firstElementChild).animationName
-      : null;
+  const anim = (b) => {
+    const dot = b?.firstElementChild?.firstElementChild;
+    return dot instanceof HTMLElement ? getComputedStyle(dot).animationName : null;
+  };
   const whileOpen = { active: anim(byLine('4')), other: anim(byLine('3')) };
   const root = document.getElementById('lowdiff-overlay-root').shadowRoot;
   [...root.querySelectorAll('div,button,span')]
@@ -295,6 +307,32 @@ await page.evaluate(() => {
     ?.click();
 });
 await page.waitForTimeout(300);
+
+// With the target line near the viewport bottom, the popover must flip
+// above the highlighted range instead of covering it.
+const flip = await page.evaluate(async () => {
+  const badge = [...document.querySelectorAll('[data-lowdiff-badge]')].find(
+    (b) => b.closest('[data-line-anchor]')?.getAttribute('data-line-number') === '4',
+  );
+  // The cited lines hug the viewport bottom — exactly where the old clamp
+  // slid the popover up on top of them.
+  badge?.closest('tr')?.scrollIntoView({ block: 'end' });
+  await new Promise((r) => setTimeout(r, 400));
+  badge?.click();
+  await new Promise((r) => setTimeout(r, 400));
+  const pop = document
+    .getElementById('lowdiff-overlay-root')
+    ?.shadowRoot?.querySelector('[style*="position: fixed"][style*="440px"]')
+    ?.getBoundingClientRect();
+  const lit = document.querySelector('[data-lowdiff-highlit]')?.getBoundingClientRect();
+  if (!pop || !lit) return null;
+  return {
+    overlapsItsLines: pop.top < lit.bottom && pop.bottom > lit.top,
+    popoverAbove: pop.bottom <= lit.top + 1,
+    // Above means just above — snug against the lines, not adrift mid-diff.
+    snugAboveLine: lit.top - pop.bottom >= 0 && lit.top - pop.bottom <= 20,
+  };
+});
 
 // Toggle a kind off via settings, as the popup does, and confirm the overlay
 // reacts without any reload.
@@ -379,8 +417,9 @@ const chatKeys = await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 
+
 console.log(
-  JSON.stringify({ ...state, popover, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
+  JSON.stringify({ ...state, wrap, popover, flip, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);

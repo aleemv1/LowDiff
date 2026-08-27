@@ -21,6 +21,10 @@ interface Open {
   note: Note;
   top: number;
   left: number;
+  /** Which side of the highlighted lines the popover sits on. */
+  side: 'below' | 'above';
+  /** The highlighted range's top, for snapping an above-popover to it. */
+  anchorTop: number;
 }
 
 const POPOVER_WIDTH = 440;
@@ -119,15 +123,20 @@ export function Overlay({ pr, overlayRoot }: Props) {
     // highlighted, which defeats the point of highlighting them.
     const anchorRect = lit ?? rect;
 
-    // Viewport (position:fixed) coordinates, like the chat button. Absolute
-    // positioning depended on a containing block inside GitHub's DOM being
-    // where we assumed — one transformed or containing ancestor and the
-    // popover landed nowhere visible. Fixed coordinates cannot miss; the
-    // layout effect below corrects any bottom overflow after render.
-    const top = Math.max(12, Math.min(anchorRect.bottom + 8, window.innerHeight - 160));
+    // Viewport (position:fixed) coordinates. Below the lines when there is
+    // room, otherwise ABOVE them — clamping a below-popover upward slid it
+    // over the very lines it had highlighted. The height here is an
+    // estimate; the layout effect below snaps to the real one.
+    const EST_HEIGHT = 340;
+    const side: 'below' | 'above' =
+      anchorRect.bottom + 8 + EST_HEIGHT <= window.innerHeight - 12 ? 'below' : 'above';
+    const top =
+      side === 'below'
+        ? anchorRect.bottom + 8
+        : Math.max(12, anchorRect.top - EST_HEIGHT - 8);
     const left = Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12));
-    console.info('[LowDiff] popover open', { top, left, lit: Boolean(lit) });
-    setOpen({ note, top, left });
+    console.info('[LowDiff] popover open', { top, left, side, lit: Boolean(lit) });
+    setOpen({ note, top, left, side, anchorTop: anchorRect.top });
   }, []);
 
   const closePopover = useCallback(() => {
@@ -313,39 +322,22 @@ export function Overlay({ pr, overlayRoot }: Props) {
 
   /**
    * The pre-render position uses an estimated height. Once the popover has a
-   * real height, nudge it back on-screen if the estimate was short — the
-   * measurement happens before paint, so there is no visible jump.
-   */
-  useLayoutEffect(() => {
-    const el = popoverRef.current;
-    const base = rootRef.current;
-    if (!el || !base || !open) return;
-    const rect = el.getBoundingClientRect();
-    const overflow = rect.bottom - (window.innerHeight - 12);
-    const minTop = 12 - base.getBoundingClientRect().top;
-    if (overflow > 0) {
-      setOpen((current) =>
-        current ? { ...current, top: Math.max(minTop, current.top - overflow) } : current,
-      );
-    }
-    // Re-run when the note changes; open.top updates must not loop, so only
-    // shift when there is genuine overflow.
-  }, [open?.note]);
-
-  /**
-   * The open position guesses; the rendered popover knows. Before paint,
-   * shift it up if it overflows the bottom of the viewport.
+   * real one, correct before paint: an above-popover snaps its bottom to the
+   * highlighted lines; a below-popover only shifts up as far as the viewport
+   * demands.
    */
   useLayoutEffect(() => {
     const el = popoverRef.current;
     if (!el || !open) return;
     const rect = el.getBoundingClientRect();
-    const overflow = rect.bottom - (window.innerHeight - 12);
-    if (overflow > 1) {
-      setOpen((current) =>
-        current ? { ...current, top: Math.max(12, current.top - overflow) } : current,
-      );
+    const top =
+      open.side === 'above'
+        ? Math.max(12, open.anchorTop - rect.height - 8)
+        : Math.min(open.top, window.innerHeight - 12 - rect.height);
+    if (Math.abs(top - open.top) > 1) {
+      setOpen((current) => (current ? { ...current, top: Math.max(12, top) } : current));
     }
+    // Keyed on the note: open.top updates from this effect must not loop.
   }, [open?.note]);
 
   /**
