@@ -117,17 +117,11 @@ export function syncBadges(
       // that opened the popover, which anything scroll-sensitive misreads.
       badge.addEventListener('mousedown', (event) => event.preventDefault());
 
-      // Absolutely positioned inside the line-number cell, so it sits beside
-      // the number without entering any layout GitHub owns. Injecting into the
-      // code cell pushed the code onto its own line in the newer view.
-      const gutter = target.gutterCell;
-      // Treat an empty computed value as unpositioned too: if we skip this,
-      // the badge resolves against some distant ancestor and lands nowhere
-      // near its line.
-      const position = getComputedStyle(gutter).position;
-      if (!position || position === 'static') gutter.style.position = 'relative';
-      gutter.style.overflow = 'visible';
-      gutter.append(badge);
+      // Trails the code text, where the reader's eye finishes the line. As
+      // an inline-flex marker it holds no layout opinion — the earlier
+      // in-cell breakage came from injecting a block-shaped, absolutely
+      // positioned badge.
+      target.codeCell.append(badge);
       placed++;
     }
   }
@@ -206,32 +200,22 @@ function createBadge(note: Note): HTMLElement {
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.title = `${note.kind}: ${note.title}`;
-  // Two elements: an invisible ~26px hit area and the 15px visual dot inside
-  // it. A 15px target alone is genuinely hard to click; growing the dot would
-  // shout, so padding does the work instead.
+  // Two elements: the clickable hit area and the 15px visual dot inside it.
+  // Inline-flex in normal flow — an absolutely positioned badge inside
+  // GitHub's cells re-based on whichever ancestor happened to be positioned,
+  // and a block-shaped one forced the code onto its own line.
   Object.assign(badge.style, {
-    position: 'absolute',
-    // Straddles the gutter's right edge so it never covers the line number,
-    // however many digits that number has.
-    right: '-13px',
-    // Centred on the FIRST text line, not the cell: when a long line
-    // soft-wraps, the cell grows but the line number stays top-aligned, and a
-    // 50% badge floats between the wrapped rows. 1lh tracks the line height.
-    top: '10px',
-    transform: 'translateY(-50%)',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '26px',
-    height: '26px',
-    zIndex: '3',
+    verticalAlign: 'middle',
+    marginLeft: '10px',
+    width: '20px',
+    height: '18px',
     cursor: 'pointer',
     userSelect: 'none',
-    flex: 'none',
     whiteSpace: 'normal',
   } satisfies Partial<CSSStyleDeclaration>);
-  // Overrides the 10px fallback where the lh unit is supported (Chrome 109+).
-  badge.style.top = '0.5lh';
 
   const visual = document.createElement('span');
   visual.innerHTML = SPARKLE_SVG; // static constant, never model data

@@ -165,15 +165,15 @@ describe('modernDom', () => {
     expect(line.codeCell.hasAttribute('data-line-anchor')).toBe(true);
   });
 
-  it('puts the badge in the gutter cell', () => {
+  it('puts the badge at the end of the code line', () => {
     syncBadges(
       [note({ anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
       modernDom,
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    expect(badge.parentElement!.hasAttribute('data-line-anchor')).toBe(false);
-    expect(badge.parentElement!.getAttribute('data-line-number')).toBe('2');
+    expect(badge.parentElement!.hasAttribute('data-line-anchor')).toBe(true);
+    expect(badge.parentElement!.lastElementChild).toBe(badge);
   });
 
   it('places a badge on the right-side line', () => {
@@ -205,18 +205,15 @@ describe('modernDom', () => {
     expect(placed).toBe(0);
   });
 
-  it('anchors a deleted-line badge beside the code, not in the left column', () => {
-    // A deleted row carries its number in the LEFT column, with an empty
-    // second column before the code. Anchoring to the cited side's own cell
-    // put left-side stars one column short of the right-side ones — every
-    // badge belongs in the cell immediately before the code.
+  it('a deleted-line badge trails its code like any other', () => {
     syncBadges(
       [note({ anchor: { path: PATH, side: 'LEFT', line: 9, lineHash: 'x' } })],
       modernDom,
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    expect(badge.parentElement!.nextElementSibling!.hasAttribute('data-line-anchor')).toBe(true);
+    expect(badge.parentElement!.hasAttribute('data-line-anchor')).toBe(true);
+    expect(badge.parentElement!.textContent).toContain('old removed line');
   });
 });
 
@@ -233,7 +230,7 @@ describe('badge placement in the gutter', () => {
     expect(line.gutterCell.getAttribute('data-line-number')).toBe('5');
   });
 
-  it('classic: the badge lands in the gutter, not the code', () => {
+  it('classic: the badge trails the code text', () => {
     document.documentElement.innerHTML = FIXTURE;
     clearBadges();
     syncBadges(
@@ -242,8 +239,8 @@ describe('badge placement in the gutter', () => {
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    expect(badge.parentElement!.className).toContain('blob-num');
-    expect(badge.parentElement!.className).not.toContain('blob-code');
+    expect(badge.parentElement!.className).toContain('blob-code');
+    expect(badge.parentElement!.lastElementChild).toBe(badge);
   });
 
   it('classic: the code text is left untouched', () => {
@@ -259,10 +256,7 @@ describe('badge placement in the gutter', () => {
     expect(after).toBe(before);
   });
 
-  it('classic: a deleted-line badge anchors to the last number cell', () => {
-    // The classic unified table renders both number cells on every row; a
-    // deleted row's right cell is just empty. The badge belongs there — the
-    // gutter/code boundary — not beside the left column's number.
+  it('classic: a deleted-line badge trails its code too', () => {
     document.documentElement.innerHTML = `
       <div class="file" data-tagsearch-path="src/removed.ts">
         <table><tbody>
@@ -281,11 +275,13 @@ describe('badge placement in the gutter', () => {
     );
     expect(placed).toBe(1);
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    const nums = badge.closest('tr')!.querySelectorAll('td.blob-num');
-    expect(badge.parentElement).toBe(nums[nums.length - 1]);
+    expect(badge.parentElement!.className).toContain('blob-code-inner');
   });
 
-  it('positions the badge without disturbing layout', () => {
+  it('flows inline so it cannot disturb the row layout', () => {
+    // Absolute positioning in the code cell re-bases on whatever GitHub
+    // ancestor happens to be positioned; an inline-flex marker after the
+    // text has no layout opinion at all.
     document.documentElement.innerHTML = FIXTURE;
     clearBadges();
     syncBadges(
@@ -294,7 +290,7 @@ describe('badge placement in the gutter', () => {
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]') as HTMLElement;
-    expect(badge.style.position).toBe('absolute');
-    expect((badge.parentElement as HTMLElement).style.position).toBe('relative');
+    expect(badge.style.position).not.toBe('absolute');
+    expect(badge.style.display).toBe('inline-flex');
   });
 });

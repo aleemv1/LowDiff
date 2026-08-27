@@ -174,7 +174,9 @@ const state = await page.evaluate(() => {
     })(),
     columnWidth: firstFile ? Math.round(firstFile.getBoundingClientRect().width) : null,
     badges: badges.length,
-    badgeParentIsGutter: badges.map((b) => !b.parentElement?.hasAttribute('data-line-anchor')),
+    badgeTrailsCode: badges.map(
+      (b) => b.parentElement?.hasAttribute('data-line-anchor') && b.parentElement.lastElementChild === b,
+    ),
     badgeLines: badges.map((b) => b.parentElement?.getAttribute('data-line-number')),
     cardBackground: cardBg,
     countChips: [...(card?.querySelectorAll('.pill') ?? [])].map((p) => ({
