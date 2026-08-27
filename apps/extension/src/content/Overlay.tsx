@@ -56,6 +56,28 @@ function describeFailure(cause: unknown): string {
  * (and with `chrome.runtime.id` still set), so the hang is the one reliable
  * signal, and a generous deadline on a fast call cannot misfire on slowness.
  */
+/**
+ * A scan legitimately runs for minutes, so it gets no deadline — instead,
+ * poll for orphaning while it waits. Reloading the extension mid-scan
+ * otherwise leaves the card on "Reading the diff…" forever.
+ */
+function orGetsOrphaned<T>(work: Promise<T>): Promise<T> {
+  let settled = false;
+  const watchdog = (async (): Promise<never> => {
+    for (;;) {
+      await new Promise((tick) => setTimeout(tick, 2000));
+      if (settled) return new Promise<never>(() => {});
+      if (orphaned()) throw new Error(REFRESH_HINT);
+    }
+  })();
+  return Promise.race([
+    work.finally(() => {
+      settled = true;
+    }),
+    watchdog,
+  ]);
+}
+
 function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   return new Promise((deliver, reject) => {
     const timer = setTimeout(() => reject(new Error(REFRESH_HINT)), ms);
@@ -180,11 +202,9 @@ export function Overlay({ pr, overlayRoot }: Props) {
       setError(null);
       let reply: AnnotateReply;
       try {
-        reply = (await chrome.runtime.sendMessage({
-          type: 'ANNOTATE',
-          pr,
-          refresh,
-        })) as AnnotateReply;
+        reply = (await orGetsOrphaned(
+          chrome.runtime.sendMessage({ type: 'ANNOTATE', pr, refresh }),
+        )) as AnnotateReply;
       } catch (cause) {
         setBusy(false);
         setError(describeFailure(cause));
