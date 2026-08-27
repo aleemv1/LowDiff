@@ -48,7 +48,8 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
         fontFamily: `'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 14px', background: style.headBg }}>
+      {/* flex-start: a wrapped title must not float the pill and ✕ mid-height. */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', padding: '11px 14px', background: style.headBg }}>
         <span
           style={{
             background: '#fff', color: style.color, borderRadius: '999px', padding: '3px 10px',
@@ -57,21 +58,31 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
         >
           {note.kind}
         </span>
-        <span style={{ font: `700 12.5px 'DM Sans',sans-serif`, color: C.ink }}>{note.title}</span>
-        {note.confidence === 'medium' && (
-          <span
-            title="Depends on code outside this diff"
-            style={{ font: `600 9.5px 'DM Sans',sans-serif`, color: C.faint, border: `1px solid ${C.line}`, borderRadius: '999px', padding: '2px 7px', background: '#fff' }}
-          >
-            unverified
-          </span>
-        )}
+        <span style={{ font: `700 12.5px/1.4 'DM Sans',sans-serif`, color: C.ink, marginTop: '2px' }}>
+          {note.title}
+        </span>
         <span
           onClick={onClose}
-          style={{ marginLeft: 'auto', cursor: 'pointer', color: C.faint, fontSize: '13px', padding: '2px 6px' }}
+          style={{ marginLeft: 'auto', cursor: 'pointer', color: C.faint, fontSize: '13px', padding: '2px 6px', flex: 'none' }}
         >
           ✕
         </span>
+      </div>
+
+      {/* Where this note lives, and how far to trust it, in plain words. */}
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px',
+          borderBottom: `1px solid ${C.line}`,
+          font: '11px ui-monospace, SFMono-Regular, Menlo, monospace', color: C.faint,
+        }}
+      >
+        {note.anchor.path.split('/').pop()}:{note.anchor.line}
+        {note.confidence === 'medium' && (
+          <span style={{ marginLeft: 'auto', font: `500 10.5px 'DM Sans',sans-serif`, color: C.muted }}>
+            ⚠ depends on code not in this diff
+          </span>
+        )}
       </div>
 
       <div style={{ padding: '12px 14px', color: C.body }}>
@@ -80,13 +91,12 @@ export function NotePopover({ note, floating, onClose, onAsk }: Props) {
 
       {note.code && (
         <div style={{ padding: '0 14px' }}>
-          <CodeBlock code={note.code} lang={languageFor(note.anchor.path)} />
+          <CodeBlock code={note.code} lang={languageFor(note.anchor.path)} role="SUGGESTED FIX" />
         </div>
       )}
 
       <div style={{ display: 'flex', gap: '8px', padding: '0 14px 13px' }}>
         <button class="btn btn-primary" onClick={() => onAsk(note)}>💬 Ask about this</button>
-        <button class="btn btn-ghost" onClick={onClose}>Got it</button>
       </div>
     </div>
   );

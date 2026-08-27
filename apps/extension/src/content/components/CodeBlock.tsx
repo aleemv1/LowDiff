@@ -90,9 +90,11 @@ export function dedent(code: string): string {
 interface Props {
   code: string;
   lang: string;
+  /** Names the block's job — "SUGGESTED FIX" — so it cannot be mistaken for quoted code. */
+  role?: string;
 }
 
-export function CodeBlock({ code, lang }: Props) {
+export function CodeBlock({ code, lang, role }: Props) {
   const [copied, setCopied] = useState(false);
   const resolved = ALIASES[lang] ?? lang;
   const grammar = resolved ? Prism.languages[resolved] : undefined;
@@ -136,6 +138,7 @@ export function CodeBlock({ code, lang }: Props) {
             color: C.faint,
           }}
         >
+          {role && <span style={{ color: 'var(--ld-ok-fg)' }}>{role} · </span>}
           {resolved || 'code'}
         </span>
         <button

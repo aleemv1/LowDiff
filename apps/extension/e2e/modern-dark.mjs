@@ -116,6 +116,7 @@ await worker.evaluate(async (apiKey) => {
           kind: 'RISK',
           title: 'Depends on environment.yml that is not in this PR',
           body: 'The `conda env update` step reads `environment.yml`, which this PR does not add.',
+          code: 'git add environment.yml',
           confidence: 'medium',
           anchor: { path: '.github/workflows/python-package-conda.yml', side: 'RIGHT', line: 4, lineHash: 'y' },
         },
@@ -208,6 +209,12 @@ const popover = await page.evaluate(() => {
     chipText: chips.map((c) => c.textContent),
     // A backtick still in the rendered text means the span was not parsed.
     literalBackticks: (root?.textContent ?? '').includes('`'),
+    contextRow: (root?.textContent ?? '').includes('python-package-conda.yml:4'),
+    plainConfidence: (root?.textContent ?? '').includes('depends on code not in this diff'),
+    fixLabelled: (root?.textContent ?? '').includes('SUGGESTED FIX'),
+    hasGotIt: [...(root?.querySelectorAll('button') ?? [])].some(
+      (b) => b.textContent === 'Got it',
+    ),
   };
 });
 
