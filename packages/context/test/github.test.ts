@@ -254,3 +254,40 @@ describe('GitHubContextProvider.getContext', () => {
     expect(ctx).toEqual([{ path: 'src/a.ts', content: 'ok' }]);
   });
 });
+
+describe('GitHubContextProvider import context', () => {
+  const b64 = (text: string) => btoa(text);
+
+  it('follows relative imports of changed files via the repo tree', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch((url) => {
+        if (url.includes('/git/trees/')) {
+          return { body: { tree: [{ path: 'src/a.ts', type: 'blob' }, { path: 'src/helper.ts', type: 'blob' }] } };
+        }
+        if (url.includes('/contents/src%2Fhelper.ts') || url.includes('/contents/src/helper.ts')) {
+          return { body: { content: b64('export const help = 1;'), encoding: 'base64' } };
+        }
+        return { body: { content: b64("import { help } from './helper.js';"), encoding: 'base64' } };
+      }),
+    });
+    const ctx = await provider.getContext(PR, [
+      { path: 'src/a.ts', status: 'modified', additions: 1, deletions: 0, hunks: [{}] },
+    ] as never);
+    expect(ctx.map((f) => f.path)).toEqual(['src/a.ts', 'src/helper.ts']);
+    expect(ctx[1]!.content).toBe('export const help = 1;');
+  });
+
+  it('survives a failing tree API — changed files still arrive', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch((url) =>
+        url.includes('/git/trees/')
+          ? { status: 500 }
+          : { body: { content: b64('code'), encoding: 'base64' } },
+      ),
+    });
+    const ctx = await provider.getContext(PR, [
+      { path: 'src/a.ts', status: 'modified', additions: 1, deletions: 0, hunks: [{}] },
+    ] as never);
+    expect(ctx.map((f) => f.path)).toEqual(['src/a.ts']);
+  });
+});

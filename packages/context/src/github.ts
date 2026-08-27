@@ -1,4 +1,4 @@
-import { parsePatch } from '@lowdiff/core';
+import { parsePatch, resolveImports } from '@lowdiff/core';
 import type { ContextFile, FileDiff, PrRef, RepoRef } from '@lowdiff/core';
 import type { CodeHit, ContextProvider, PrMeta } from './types.js';
 
@@ -164,23 +164,55 @@ export class GitHubContextProvider implements ContextProvider {
     const PER_FILE_MAX = 60_000;
     const TOTAL_MAX = 240_000;
 
+    const IMPORT_MAX = 10;
+
     const wanted = files.filter((f) => f.status !== 'removed' && f.hunks.length > 0);
     const out: ContextFile[] = [];
     let budget = TOTAL_MAX;
 
-    for (const file of wanted) {
-      if (budget <= 0) break;
+    const take = async (path: string): Promise<ContextFile | null> => {
+      if (budget <= 0) return null;
       let content: string;
       try {
-        content = await this.getFile(pr, file.path, pr.headSha);
+        content = await this.getFile(pr, path, pr.headSha);
       } catch {
-        continue;
+        return null;
       }
-      if (!content || content.length > PER_FILE_MAX || content.length > budget) continue;
+      if (!content || content.length > PER_FILE_MAX || content.length > budget) return null;
       budget -= content.length;
-      out.push({ path: file.path, content });
+      const entry = { path, content };
+      out.push(entry);
+      return entry;
+    };
+
+    for (const file of wanted) await take(file.path);
+
+    // Follow the changed files' imports: what a file builds on is the next
+    // most useful thing to show. One tree request lists every repo path, so
+    // resolving './helper' is a set lookup, not trial-and-error fetches.
+    const tree = await this.getTree(pr).catch(() => null);
+    if (tree) {
+      const have = new Set(out.map((f) => f.path));
+      const found: string[] = [];
+      for (const file of out.slice()) {
+        for (const imported of resolveImports(file.path, file.content, tree)) {
+          if (!have.has(imported) && !found.includes(imported)) found.push(imported);
+        }
+      }
+      for (const path of found.slice(0, IMPORT_MAX)) await take(path);
     }
     return out;
+  }
+
+  /** Every blob path in the repo at this commit; one request, recursive. */
+  private async getTree(pr: PrRef): Promise<Set<string>> {
+    const data = await this.request<{ tree?: { path?: string; type?: string }[] }>(
+      `/repos/${pr.owner}/${pr.repo}/git/trees/${pr.headSha}?recursive=1`,
+    );
+    const paths = (data.tree ?? [])
+      .filter((entry) => entry.type === 'blob' && entry.path)
+      .map((entry) => entry.path as string);
+    return new Set(paths);
   }
 
   async getFile(repo: RepoRef, path: string, ref: string): Promise<string> {

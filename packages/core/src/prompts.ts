@@ -127,9 +127,10 @@ ${renderDiff(files)}`;
   return `${head}
 
 Context follows, for understanding only — whole changed files (how the
-changed lines sit inside their functions) and, when present, repository
-search results showing where the changed symbols are used. You must still
-cite only lines from the diff above; context sections are not citable.
+changed lines sit inside their functions), files they import, and, when
+present, repository search results showing where the changed symbols are
+used. You must still cite only lines from the diff above; context sections
+are not citable.
 
 ${sections}`;
 }
