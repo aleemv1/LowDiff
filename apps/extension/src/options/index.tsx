@@ -1,12 +1,9 @@
 import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
-import type { DeviceStart } from '../background/oauth.js';
-import { googleToken, pollOpenAiDeviceFlow, startOpenAiDeviceFlow } from '../background/oauth.js';
 import { C, STYLES } from '../content/theme.js';
 
 // The C tokens are var(--ld-*) references declared under :host for the shadow
@@ -49,30 +46,9 @@ layout.textContent = `
 `;
 document.head.append(layout);
 
-const PROVIDERS: { id: ProviderId; label: string; keyUrl: string; note: string }[] = [
-  {
-    id: 'anthropic',
-    label: 'Anthropic',
-    keyUrl: 'https://console.anthropic.com/settings/keys',
-    note: 'API key only — Anthropic restricts subscription sign-in to Claude Code and claude.ai.',
-  },
-  {
-    id: 'openai',
-    label: 'OpenAI',
-    keyUrl: 'https://platform.openai.com/api-keys',
-    note: 'API key. Account sign-in is gated on OpenAI approving third-party device-code access.',
-  },
-  {
-    id: 'google',
-    label: 'Google',
-    keyUrl: 'https://aistudio.google.com/apikey',
-    note: 'API key, or connect your Google account below — no key needed.',
-  },
-];
-
 const STEPS: { title: string; detail: string }[] = [
-  { title: 'Pick a provider', detail: 'Anthropic, OpenAI, or Google' },
-  { title: 'Paste a key — or link an account', detail: 'API key from your provider console, or connect Google with no key at all' },
+  { title: 'Paste your Anthropic API key', detail: 'Created in the Anthropic console — one click away' },
+  { title: 'Add a GitHub token if you like', detail: 'Private repos and a 5,000 req/hour limit instead of 60' },
   { title: 'Open any pull request', detail: 'The review card and ✦ badges appear on the diff' },
 ];
 
@@ -80,8 +56,6 @@ function Options() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [advanced, setAdvanced] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [device, setDevice] = useState<DeviceStart | null>(null);
   const saveTimer = useRef<number | undefined>(undefined);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -105,42 +79,6 @@ function Options() {
       }, 500);
       return next;
     });
-  };
-
-  const active = PROVIDERS.find((p) => p.id === settings.provider)!;
-
-  const connectGoogle = async () => {
-    setAuthError(null);
-    const token = await googleToken(true);
-    if (token) update({ googleAccount: true });
-    else
-      setAuthError(
-        'Google sign-in failed. Create an OAuth client of type "Chrome Extension" in Google ' +
-          'Cloud console and put its id in manifest.json under oauth2.client_id, then reload.',
-      );
-  };
-
-  const connectOpenAi = async () => {
-    const clientId = settings.openaiClientId;
-    if (!clientId) return;
-    setAuthError(null);
-    try {
-      const start = await startOpenAiDeviceFlow(clientId);
-      setDevice(start);
-      for (;;) {
-        await new Promise((r) => setTimeout(r, start.interval * 1000));
-        const poll = await pollOpenAiDeviceFlow(clientId, start.deviceCode);
-        if (poll.status === 'done') {
-          const { status: _status, ...tokens } = poll;
-          update({ openaiTokens: tokens });
-          break;
-        }
-      }
-    } catch (cause) {
-      setAuthError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setDevice(null);
-    }
   };
 
   const field = {
@@ -202,8 +140,8 @@ function Options() {
           class="rise"
           style={{ font: `14px/1.6 'DM Sans',sans-serif`, color: C.muted, margin: '0 0 22px', animationDelay: '.12s' }}
         >
-          LowDiff layers AI findings over GitHub pull requests. Keys stay in this browser and
-          are sent only to the provider you pick.
+          LowDiff layers AI findings over GitHub pull requests. Your key stays in this
+          browser and is sent only to Anthropic.
         </p>
         {STEPS.map((step, i) => (
           <div
@@ -239,101 +177,37 @@ function Options() {
           padding: '6px 22px 20px', animationDelay: '.12s',
         }}
       >
-        <label style={label}>MODEL PROVIDER</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {PROVIDERS.map((p) => (
-            <button key={p.id} onClick={() => update({ provider: p.id })} style={segButton(settings.provider === p.id)}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <p style={help}>{active.note}</p>
-
-        <label style={label}>{active.label.toUpperCase()} API KEY</label>
+        <label style={label}>ANTHROPIC API KEY</label>
         <input
           type="password"
-          value={settings.keys[settings.provider] ?? ''}
+          value={settings.keys.anthropic ?? ''}
           placeholder="Paste your key"
           onInput={(e) =>
-            update({
-              keys: { ...settings.keys, [settings.provider]: (e.target as HTMLInputElement).value },
-            })
+            update({ keys: { ...settings.keys, anthropic: (e.target as HTMLInputElement).value } })
           }
           style={field}
         />
         <a
-          href={active.keyUrl}
+          href="https://console.anthropic.com/settings/keys"
           target="_blank"
           rel="noreferrer"
           style={{ font: `600 11.5px 'DM Sans',sans-serif`, color: C.accentDark, display: 'inline-block', marginTop: '7px' }}
         >
-          Create a key on {active.label} ↗
+          Create a key on Anthropic ↗
         </a>
 
-        {settings.provider === 'google' && (
-          <div style={{ marginTop: '14px' }}>
-            {settings.googleAccount ? (
-              <span style={{ font: `600 12px 'DM Sans',sans-serif`, color: '#1a7f37' }}>
-                ✓ Google account connected
-                <span
-                  onClick={() => update({ googleAccount: false })}
-                  style={{ color: C.muted, cursor: 'pointer', marginLeft: '12px', fontWeight: 500 }}
-                >
-                  Disconnect
-                </span>
-              </span>
-            ) : (
-              <button
-                onClick={() => void connectGoogle()}
-                style={{
-                  background: C.accent, color: '#fff', border: 'none', borderRadius: '999px',
-                  padding: '8px 16px', font: `600 12px 'DM Sans',sans-serif`, cursor: 'pointer',
-                }}
-              >
-                Connect Google account — no API key needed
-              </button>
-            )}
-          </div>
-        )}
-
-        {settings.provider === 'openai' && (
-          <div style={{ marginTop: '14px' }}>
-            {settings.openaiTokens ? (
-              <span style={{ font: `600 12px 'DM Sans',sans-serif`, color: '#1a7f37' }}>
-                ✓ OpenAI account connected
-                <span
-                  onClick={() => update({ openaiTokens: undefined })}
-                  style={{ color: C.muted, cursor: 'pointer', marginLeft: '12px', fontWeight: 500 }}
-                >
-                  Disconnect
-                </span>
-              </span>
-            ) : device ? (
-              <p style={{ font: `12.5px/1.6 'DM Sans',sans-serif`, color: C.ink, margin: 0 }}>
-                Enter code <b>{device.userCode}</b> at{' '}
-                <a href={device.verificationUri} target="_blank" rel="noreferrer" style={{ color: C.accentDark }}>
-                  {device.verificationUri}
-                </a>{' '}
-                — waiting for approval…
-              </p>
-            ) : settings.openaiClientId ? (
-              <button
-                onClick={() => void connectOpenAi()}
-                style={{
-                  background: C.accent, color: '#fff', border: 'none', borderRadius: '999px',
-                  padding: '8px 16px', font: `600 12px 'DM Sans',sans-serif`, cursor: 'pointer',
-                }}
-              >
-                Sign in with ChatGPT (device code)
-              </button>
-            ) : (
-              <p style={help}>
-                Plan sign-in needs an OpenAI-approved OAuth client id — set one under Advanced.
-              </p>
-            )}
-          </div>
-        )}
-        {authError && <p style={help}>{authError}</p>}
+        <label style={label}>GITHUB TOKEN (OPTIONAL)</label>
+        <input
+          type="password"
+          value={settings.githubToken ?? ''}
+          placeholder="Needed for private repos and a higher rate limit"
+          onInput={(e) => update({ githubToken: (e.target as HTMLInputElement).value || undefined })}
+          style={field}
+        />
+        <p style={help}>
+          Fine-grained token, read-only on Contents, Pull requests, and Metadata. Without one,
+          public repos work at 60 requests/hour instead of 5,000.
+        </p>
 
         <div
           onClick={() => setAdvanced(!advanced)}
@@ -342,7 +216,7 @@ function Options() {
             font: `600 12px 'DM Sans',sans-serif`, color: C.muted, cursor: 'pointer',
           }}
         >
-          {advanced ? '▾' : '▸'} Advanced — model override, GitHub token, local repo search
+          {advanced ? '▾' : '▸'} Advanced — model override, local repo search
         </div>
 
         {advanced && (
@@ -350,23 +224,10 @@ function Options() {
             <label style={label}>MODEL (OPTIONAL)</label>
             <input
               value={settings.model ?? ''}
-              placeholder={DEFAULT_MODELS[settings.provider]}
+              placeholder={DEFAULT_MODELS.anthropic}
               onInput={(e) => update({ model: (e.target as HTMLInputElement).value || undefined })}
               style={field}
             />
-
-            <label style={label}>GITHUB TOKEN (OPTIONAL)</label>
-            <input
-              type="password"
-              value={settings.githubToken ?? ''}
-              placeholder="Needed for private repos and a higher rate limit"
-              onInput={(e) => update({ githubToken: (e.target as HTMLInputElement).value || undefined })}
-              style={field}
-            />
-            <p style={help}>
-              Fine-grained token, read-only on Contents, Pull requests, and Metadata. Without
-              one, public repos work at 60 requests/hour instead of 5,000.
-            </p>
 
             <label style={label}>DAEMON TOKEN (OPTIONAL)</label>
             <input
@@ -381,17 +242,6 @@ function Options() {
               Without it, chat sees only the pull request.
             </p>
 
-            <label style={label}>OPENAI OAUTH CLIENT ID (OPTIONAL)</label>
-            <input
-              value={settings.openaiClientId ?? ''}
-              placeholder="Enables ChatGPT plan sign-in instead of a key"
-              onInput={(e) => update({ openaiClientId: (e.target as HTMLInputElement).value || undefined })}
-              style={field}
-            />
-            <p style={help}>
-              OpenAI approves third-party device-code clients case by case; without an approved
-              id this stays a key-only provider.
-            </p>
           </div>
         )}
       </div>

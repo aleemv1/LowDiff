@@ -13,7 +13,9 @@ const KEY = 'lowdiff:settings';
 export async function loadSettings(): Promise<Settings> {
   const stored = await chrome.storage.local.get(KEY);
   const value = stored[KEY] as Partial<Settings> | undefined;
-  return { ...DEFAULT_SETTINGS, ...value, keys: { ...(value?.keys ?? {}) } };
+  // This release ships Anthropic only; a stored provider from an earlier
+  // build must not route the scan somewhere the UI cannot configure.
+  return { ...DEFAULT_SETTINGS, ...value, keys: { ...(value?.keys ?? {}) }, provider: 'anthropic' };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
@@ -25,10 +27,7 @@ export function toPublicSettings(settings: Settings): PublicSettings {
   return {
     provider: settings.provider,
     ...(settings.model !== undefined ? { model: settings.model } : {}),
-    configured:
-      Boolean(settings.keys[settings.provider]) ||
-      (settings.provider === 'google' && Boolean(settings.googleAccount)) ||
-      (settings.provider === 'openai' && Boolean(settings.openaiTokens)),
+    configured: Boolean(settings.keys.anthropic),
     deepAvailable: Boolean(settings.daemonToken),
     hiddenKinds: settings.hiddenKinds ?? [],
   };

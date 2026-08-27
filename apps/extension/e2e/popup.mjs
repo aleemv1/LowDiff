@@ -39,17 +39,16 @@ await page.goto(`chrome-extension://${id}/popup.html`, { waitUntil: 'domcontentl
 await page.setViewportSize({ width: 320, height: 560 });
 await page.waitForTimeout(400);
 
-// Hide two kinds, switch provider, pick a model; read back what persisted.
+// Hide two kinds and pick a model; read back what persisted.
 await page.click('button:has-text("Problems only")');
-await page.click('button:has-text("Google")');
 await page.waitForTimeout(200);
-await page.selectOption('select', 'gemini-3.7-pro');
+await page.selectOption('select', 'claude-sonnet-5');
 await page.waitForTimeout(200);
 
 const persisted = await worker.evaluate(async () => {
   const stored = await chrome.storage.local.get('lowdiff:settings');
   const s = stored['lowdiff:settings'];
-  return { provider: s.provider, model: s.model, hidden: s.hiddenKinds };
+  return { model: s.model, hidden: s.hiddenKinds };
 });
 console.log('persisted after clicks:', JSON.stringify(persisted));
 

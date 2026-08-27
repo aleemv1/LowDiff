@@ -1,7 +1,8 @@
 import { anchorNotes, reanchor, symbolsFromDiff } from '@lowdiff/core';
 import { DaemonClient, GitHubContextProvider } from '@lowdiff/context';
-import { createLlmClient } from '@lowdiff/providers';
-import type { AuthConfig } from '@lowdiff/providers/types';
+// AnthropicClient directly, not createLlmClient: the factory pulls every
+// provider SDK into the worker bundle, and this release ships Anthropic only.
+import { AnthropicClient } from '@lowdiff/providers';
 import type {
   AnnotateReply,
   ChatTurn,
@@ -11,7 +12,6 @@ import type {
   Request,
 } from '../shared/messages.js';
 import { loadSettings, saveSettings, toPublicSettings } from './storage.js';
-import { googleToken, refreshOpenAiToken } from './oauth.js';
 import { readCache, writeCache } from './cache.js';
 
 /**
@@ -70,34 +70,10 @@ async function handle(
   }
 }
 
-/** A key when set; otherwise whichever account connection the provider has. */
-async function resolveAuth(settings: Awaited<ReturnType<typeof loadSettings>>): Promise<AuthConfig> {
-  const key = settings.keys[settings.provider];
-  if (key) return { kind: 'apiKey', key };
-
-  if (settings.provider === 'google' && settings.googleAccount) {
-    // Chrome mints and refreshes this against the signed-in profile; nothing
-    // is stored on our side.
-    const token = await googleToken(false);
-    if (token) return { kind: 'oauth', accessToken: token, refreshToken: '', expiresAt: 0 };
-    throw new Error('Google connection expired — reconnect in LowDiff options.');
-  }
-
-  if (settings.provider === 'openai' && settings.openaiTokens && settings.openaiClientId) {
-    let tokens = settings.openaiTokens;
-    if (tokens.expiresAt < Date.now() + 60_000) {
-      tokens = await refreshOpenAiToken(settings.openaiClientId, tokens.refreshToken);
-      await saveSettings({ ...settings, openaiTokens: tokens });
-    }
-    return { kind: 'oauth', ...tokens };
-  }
-
-  throw new Error(`No API key set for ${settings.provider}. Open LowDiff options to add one.`);
-}
-
 async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise<AnnotateReply> {
   const settings = await loadSettings();
-  const auth = await resolveAuth(settings);
+  const key = settings.keys.anthropic;
+  if (!key) throw new Error('No Anthropic API key set. Open LowDiff options to add one.');
 
   const github = new GitHubContextProvider(
     settings.githubToken ? { token: settings.githubToken } : {},
@@ -147,9 +123,9 @@ async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise
     }
   }
 
-  const llm = createLlmClient({
-    provider: settings.provider,
-    auth,
+  const llm = new AnthropicClient({
+    provider: 'anthropic',
+    auth: { kind: 'apiKey', key },
     ...(settings.model ? { model: settings.model } : {}),
   });
 
@@ -188,7 +164,8 @@ async function chat(
   portName: string,
 ): Promise<void> {
   const settings = await loadSettings();
-  const auth = await resolveAuth(settings);
+  const key = settings.keys.anthropic;
+  if (!key) throw new Error('No Anthropic API key set. Open LowDiff options to add one.');
 
   const github = new GitHubContextProvider(
     settings.githubToken ? { token: settings.githubToken } : {},
@@ -201,9 +178,9 @@ async function chat(
   // that may not match the note on screen.
   const review = await readCache(pr.owner, pr.repo, pr.number, meta.headSha);
 
-  const llm = createLlmClient({
-    provider: settings.provider,
-    auth,
+  const llm = new AnthropicClient({
+    provider: 'anthropic',
+    auth: { kind: 'apiKey', key },
     ...(settings.model ? { model: settings.model } : {}),
   });
 

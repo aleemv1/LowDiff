@@ -31,13 +31,13 @@ await page.waitForSelector('input');
 
 const state = await page.evaluate(() => {
   const input = document.querySelector('input');
-  const active = [...document.querySelectorAll('button')].find((b) => b.textContent === 'Anthropic');
+  const logo = document.querySelector('.twinkle')?.parentElement ?? null;
   const inputStyle = input ? getComputedStyle(input) : null;
   return {
     inputBorderStyle: inputStyle?.borderTopStyle ?? null,
     inputBorderColor: inputStyle?.borderTopColor ?? null,
-    // The selected provider borders in the accent — proof the tokens resolve.
-    activeProviderBorder: active ? getComputedStyle(active).borderTopColor : null,
+    // The logo fills with the accent — proof the tokens resolve.
+    logoBackground: logo ? getComputedStyle(logo).backgroundColor : null,
   };
 });
 
@@ -56,8 +56,12 @@ const landing = await page.evaluate(() => ({
     );
     return el ? getComputedStyle(el).animationName !== 'none' : false;
   })(),
-  advancedCollapsed: ![...document.querySelectorAll('input')].some(
+  // The GitHub token is a first-class field now; the daemon stays advanced.
+  githubTokenVisible: [...document.querySelectorAll('input')].some(
     (i) => i.placeholder.startsWith('Needed for private repos') && i.checkVisibility(),
+  ),
+  advancedCollapsed: ![...document.querySelectorAll('input')].some(
+    (i) => i.placeholder.startsWith('Lets chat search') && i.checkVisibility(),
   ),
   hasSaveButton: [...document.querySelectorAll('button')].some((b) => b.textContent === 'Save'),
 }));
@@ -89,25 +93,16 @@ const autosave = await page.evaluate(async () => {
   };
 });
 
-// Account linking: selecting Google offers a connect button instead of
-// demanding a key.
-await page.evaluate(() => {
-  [...document.querySelectorAll('button')].find((b) => b.textContent === 'Google')?.click();
-});
-await page.waitForTimeout(300);
-const account = await page.evaluate(() => ({
-  connectButton: [...document.querySelectorAll('button')].some((b) =>
-    b.textContent?.includes('Connect Google account'),
-  ),
-}));
-
 const pass = {
   inputHasBorder: state.inputBorderStyle === 'solid',
-  tokensResolve: state.activeProviderBorder === 'rgb(91, 91, 214)',
+  tokensResolve: state.logoBackground === 'rgb(91, 91, 214)',
   guidedLanding:
-    landing.hasSteps && landing.hasWordmark && landing.advancedCollapsed && !landing.hasSaveButton,
+    landing.hasSteps &&
+    landing.hasWordmark &&
+    landing.githubTokenVisible &&
+    landing.advancedCollapsed &&
+    !landing.hasSaveButton,
   autosave: autosave.persistedKey === 'sk-test-autosave' && autosave.toastShown,
-  accountLinking: account.connectButton,
   scaledLayout:
     scale.contentWidth >= 1000 &&
     Math.abs(scale.leftGap - scale.rightGap) <= 40 &&
@@ -122,7 +117,7 @@ if (shotAt !== -1) {
   console.log(`screenshot → ${process.argv[shotAt + 1]}`);
 }
 
-console.log(JSON.stringify({ ...state, landing, scale, autosave, account, pass }, null, 2));
+console.log(JSON.stringify({ ...state, landing, scale, autosave, pass }, null, 2));
 if (Object.values(pass).some((p) => !p)) process.exitCode = 1;
 
 await context.close();

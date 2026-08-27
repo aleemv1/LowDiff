@@ -11,9 +11,10 @@ with the codebase through the change). The toolbar popup dials how much of
 that you see — problems only through everything — instantly, by filtering the
 one cached scan rather than paying for another.
 
-Bring your own credentials: an API key for Anthropic, OpenAI, or Google — or a
-connected Google account with no key at all. Nothing is hosted, so nobody pays
-for anyone else's inference.
+Bring your own Anthropic API key. Nothing is hosted, so nobody pays for anyone
+else's inference. (OpenAI and Google adapters exist in `packages/providers`
+and may return to the extension later; this release ships the path that is
+battle-tested.)
 
 ## Set up in Chrome
 
@@ -27,25 +28,13 @@ Open `chrome://extensions`, switch on **Developer mode**, click **Load
 unpacked**, and pick `apps/extension/dist`. The options page opens by itself on
 first install.
 
-**2. Connect a model provider.** Either:
+**2. Paste your Anthropic API key** on the options page (the "Create a key"
+link goes to the console). Settings save on their own; there is no Save
+button to forget.
 
-- **Paste an API key** — pick Anthropic, OpenAI, or Google on the options page
-  and paste a key (the "Create a key" link goes to the right console). Settings
-  save on their own; there is no Save button to forget.
-- **Or connect a Google account (no key).** One-time setup, because Google's
-  OAuth client is yours, not ours:
-  1. In [Google Cloud console](https://console.cloud.google.com/apis/credentials),
-     create an OAuth client of type **Chrome Extension**, using your extension's
-     ID from `chrome://extensions`.
-  2. Put the client id in `apps/extension/manifest.json` under
-     `oauth2.client_id`, rebuild, and reload the extension.
-  3. Options → Google → **Connect Google account**. Tokens are minted per call
-     by Chrome against your signed-in profile; LowDiff never stores one.
-
-**3. (Optional) GitHub token.** Without one, public repos work at 60 API
-requests/hour; a fine-grained read-only token (Contents, Pull requests,
-Metadata) raises that to 5,000 and unlocks private repos. Paste it under
-**Advanced** on the options page.
+**3. (Optional) GitHub token**, right below the key. Without one, public
+repos work at 60 API requests/hour; a fine-grained read-only token (Contents,
+Pull requests, Metadata) raises that to 5,000 and unlocks private repos.
 
 **4. (Optional) Local repo search.** Run `npm run daemon` in this repo and
 paste the token it prints into **Advanced**. Chat can then grep and read your
@@ -131,14 +120,11 @@ Chromium against live GitHub and a saved copy of the client-rendered view.
 
 ## Provider auth
 
-| Provider | API key | Account sign-in |
-|---|---|---|
-| Anthropic | ✅ | ❌ — subscription OAuth is restricted to Claude Code and claude.ai |
-| OpenAI | ✅ | ⚠️ device-code flow implemented, but gated on an OpenAI-approved client id (set under Advanced) |
-| Google | ✅ | ✅ — see the setup steps above |
-
-LowDiff will not impersonate another application's OAuth client to reach a
-provider's subscription plans; that gate is each provider's to open.
+The extension ships Anthropic, API-key only. Subscription sign-in is
+restricted by Anthropic to Claude Code and claude.ai, and LowDiff will not
+impersonate another application's OAuth client; that gate is each provider's
+to open. The OpenAI and Google adapters remain in `packages/providers` for
+the CLI and a future release.
 
 ## Roadmap
 

@@ -1,23 +1,18 @@
 /**
- * Toolbar popup: the quick controls — provider, model, mode — with a link to
+ * Toolbar popup: the quick controls — detail level and model — with a link to
  * the full options page for keys and tokens. Keys are deliberately not
  * editable here; a popup dismisses on any focus change, which makes it a bad
  * place to paste secrets.
  */
 import { render } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
 import type { NoteKind } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
 
-const PROVIDERS: { id: ProviderId; label: string; models: string[] }[] = [
-  { id: 'anthropic', label: 'Anthropic', models: ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'] },
-  { id: 'openai', label: 'OpenAI', models: ['gpt-5.5', 'gpt-5.5-mini'] },
-  { id: 'google', label: 'Google', models: ['gemini-3.7-flash', 'gemini-3.7-pro'] },
-];
+const MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'];
 
 /**
  * One question — how much do you want to hear? — instead of six switches.
@@ -78,18 +73,13 @@ function Popup() {
     void saveSettings(next);
   };
 
-  const provider = PROVIDERS.find((p) => p.id === settings.provider) ?? PROVIDERS[0]!;
-  const connected = (id: string) =>
-    Boolean(settings.keys[id as keyof typeof settings.keys]) ||
-    (id === 'google' && Boolean(settings.googleAccount)) ||
-    (id === 'openai' && Boolean(settings.openaiTokens));
-  const hasKey = connected(settings.provider);
+  const hasKey = Boolean(settings.keys.anthropic);
   const models = useMemo(() => {
-    const list = [...provider.models];
+    const list = [...MODELS];
     // A custom model from options stays selectable rather than vanishing.
     if (settings.model && !list.includes(settings.model)) list.unshift(settings.model);
     return list;
-  }, [provider, settings.model]);
+  }, [settings.model]);
 
   const label = {
     display: 'block',
@@ -124,42 +114,19 @@ function Popup() {
         )}
       </div>
 
-      <label style={label}>PROVIDER</label>
-      <div style={{ display: 'flex', gap: '6px' }}>
-        {PROVIDERS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => update({ provider: p.id, model: undefined })}
-            style={{
-              flex: 1,
-              padding: '7px 0',
-              borderRadius: '7px',
-              cursor: 'pointer',
-              font: '600 11.5px inherit',
-              border: `1px solid ${settings.provider === p.id ? T.accent : T.line}`,
-              background: settings.provider === p.id ? T.tint : 'transparent',
-              color: settings.provider === p.id ? T.accent : T.muted,
-            }}
-          >
-            {p.label}
-            {!connected(p.id) && ' ⚠'}
-          </button>
-        ))}
-      </div>
-
       <label style={label}>MODEL</label>
       <select
         style={select}
-        value={settings.model ?? DEFAULT_MODELS[settings.provider]}
+        value={settings.model ?? DEFAULT_MODELS.anthropic}
         onChange={(e) => {
           const value = (e.target as HTMLSelectElement).value;
-          update({ model: value === DEFAULT_MODELS[settings.provider] ? undefined : value });
+          update({ model: value === DEFAULT_MODELS.anthropic ? undefined : value });
         }}
       >
         {models.map((m) => (
           <option key={m} value={m}>
             {m}
-            {m === DEFAULT_MODELS[settings.provider] ? ' (default)' : ''}
+            {m === DEFAULT_MODELS.anthropic ? ' (default)' : ''}
           </option>
         ))}
       </select>
