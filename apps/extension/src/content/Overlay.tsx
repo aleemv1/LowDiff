@@ -1,7 +1,6 @@
 import { createPortal } from 'preact/compat';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { Mode, Note, NoteKind } from '@lowdiff/core';
-import { REVIEW_KINDS } from '@lowdiff/core';
+import type { Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
@@ -77,7 +76,6 @@ function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
  * reviewer is already reading rather than on a copy of it.
  */
 export function Overlay({ pr, overlayRoot }: Props) {
-  const [mode, setMode] = useState<Mode>('review');
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
   const [hiddenKinds, setHiddenKinds] = useState<NoteKind[]>([]);
@@ -95,26 +93,11 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [usage, setUsage] = useState<string | null>(null);
   const [repos, setRepos] = useState<string[]>([]);
 
-  // One scan carries every kind; the Review/Explain toggle and the popup's
-  // kind filter are both display-time lenses over it, so switching either is
-  // instant and free.
-  const viewNotes = useMemo(
-    () => notes.filter((note) => mode === 'explain' || REVIEW_KINDS.includes(note.kind)),
-    [notes, mode],
-  );
+  // One scan carries every kind; the popup's kind filter is the one lens
+  // over it, so changing it is instant and free.
   const visibleNotes = useMemo(
-    () => viewNotes.filter((note) => !hiddenKinds.includes(note.kind)),
-    [viewNotes, hiddenKinds],
-  );
-  // Kept out by the lens, not the user's filter — say so, or the Review view
-  // silently sits on explanation the reader never learns exists.
-  const explainOnly = useMemo(
-    () =>
-      mode === 'review'
-        ? notes.filter((n) => !REVIEW_KINDS.includes(n.kind) && !hiddenKinds.includes(n.kind))
-            .length
-        : 0,
-    [notes, mode, hiddenKinds],
+    () => notes.filter((note) => !hiddenKinds.includes(note.kind)),
+    [notes, hiddenKinds],
   );
 
   const notesRef = useRef<Note[]>([]);
@@ -260,7 +243,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
 
-      setMode(reply.ok ? reply.settings.defaultMode : 'review');
       if (reply.ok) setHiddenKinds(reply.settings.hiddenKinds);
 
       if (reply.ok && !reply.settings.configured) {
@@ -382,34 +364,17 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, [open, closePopover]);
 
   const notesLost = visibleNotes.length - placed;
-  const notesHidden = viewNotes.length - visibleNotes.length;
+  const notesHidden = notes.length - visibleNotes.length;
 
   return (
     <div class="root" ref={rootRef}>
       <SummaryCard
         summary={error ?? summary}
         notes={visibleNotes}
-        mode={mode}
         cached={cached}
         busy={busy}
-        onMode={(next) => {
-          if (next === mode) return;
-          setMode(next);
-          closePopover();
-        }}
         onRefresh={() => void run(true)}
       />
-
-      {explainOnly > 0 && !busy && (
-        <div
-          style={{
-            font: `11px/1.5 'DM Sans',sans-serif`, color: C.faint,
-            margin: '-8px 0 14px', paddingLeft: '2px',
-          }}
-        >
-          {explainOnly} more note{explainOnly === 1 ? '' : 's'} in the Explain view.
-        </div>
-      )}
 
       {notesHidden > 0 && !busy && (
         <div

@@ -2,7 +2,6 @@ import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
-import type { Mode } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
@@ -335,15 +334,6 @@ function Options() {
           </div>
         )}
         {authError && <p style={help}>{authError}</p>}
-
-        <label style={label}>DEFAULT MODE</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(['review', 'explain'] as Mode[]).map((m) => (
-            <button key={m} onClick={() => update({ defaultMode: m })} style={segButton(settings.defaultMode === m)}>
-              {m === 'review' ? 'Review — problems only' : 'Explain — narrate the change'}
-            </button>
-          ))}
-        </div>
 
         <div
           onClick={() => setAdvanced(!advanced)}

@@ -1,4 +1,4 @@
-import type { Mode, Note, NoteKind } from '@lowdiff/core';
+import type { Note, NoteKind } from '@lowdiff/core';
 import type { ProviderId } from '@lowdiff/providers/types';
 
 export interface Settings {
@@ -23,7 +23,6 @@ export interface Settings {
   openaiTokens?:
     | { accessToken: string; refreshToken: string; expiresAt: number }
     | undefined;
-  defaultMode: Mode;
   /**
    * Note kinds hidden from the overlay. Stored as the negative so new kinds
    * added later default to visible instead of silently vanishing.
@@ -34,14 +33,12 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   provider: 'anthropic',
   keys: {},
-  defaultMode: 'review',
 };
 
 /** Settings safe to expose to the content script — no credentials. */
 export interface PublicSettings {
   provider: ProviderId;
   model?: string | undefined;
-  defaultMode: Mode;
   configured: boolean;
   hiddenKinds: NoteKind[];
 }

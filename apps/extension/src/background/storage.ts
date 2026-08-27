@@ -25,7 +25,6 @@ export function toPublicSettings(settings: Settings): PublicSettings {
   return {
     provider: settings.provider,
     ...(settings.model !== undefined ? { model: settings.model } : {}),
-    defaultMode: settings.defaultMode,
     configured:
       Boolean(settings.keys[settings.provider]) ||
       (settings.provider === 'google' && Boolean(settings.googleAccount)) ||

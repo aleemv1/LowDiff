@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { Mode, Note, NoteKind } from '@lowdiff/core';
+import type { Note, NoteKind } from '@lowdiff/core';
 import { C, KIND_STYLE } from '../theme.js';
 import { Sparkle } from './Sparkle.js';
 import { Markdown } from './Markdown.js';
@@ -7,10 +7,8 @@ import { Markdown } from './Markdown.js';
 interface Props {
   summary: string;
   notes: Note[];
-  mode: Mode;
   cached: boolean;
   busy: boolean;
-  onMode: (mode: Mode) => void;
   onRefresh: () => void;
 }
 
@@ -82,22 +80,6 @@ export function SummaryCard(props: Props) {
         </span>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ display: 'flex', border: `1px solid ${C.line}`, borderRadius: '999px', overflow: 'hidden' }}>
-            {(['review', 'explain'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => props.onMode(m)}
-                style={{
-                  border: 'none', cursor: 'pointer', padding: '4px 12px',
-                  font: `600 10.5px 'DM Sans',sans-serif`,
-                  background: props.mode === m ? C.accent : 'transparent',
-                  color: props.mode === m ? '#fff' : C.muted,
-                }}
-              >
-                {m === 'review' ? 'Review' : 'Explain'}
-              </button>
-            ))}
-          </span>
           <button
             class="btn btn-ghost"
             style={{ padding: '4px 10px' }}

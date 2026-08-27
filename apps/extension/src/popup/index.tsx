@@ -8,7 +8,7 @@ import { render } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { ProviderId } from '@lowdiff/providers/types';
 import { DEFAULT_MODELS } from '@lowdiff/providers/types';
-import type { Mode, NoteKind } from '@lowdiff/core';
+import type { NoteKind } from '@lowdiff/core';
 import type { Settings } from '../shared/messages.js';
 import { DEFAULT_SETTINGS } from '../shared/messages.js';
 import { loadSettings, saveSettings } from '../background/storage.js';
@@ -204,28 +204,6 @@ function Popup() {
             </button>
           );
         })}
-      </div>
-
-      <label style={label}>MODE</label>
-      <div style={{ display: 'flex', gap: '6px' }}>
-        {(['review', 'explain'] as Mode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => update({ defaultMode: m })}
-            style={{
-              flex: 1,
-              padding: '7px 0',
-              borderRadius: '7px',
-              cursor: 'pointer',
-              font: '600 11.5px inherit',
-              border: `1px solid ${settings.defaultMode === m ? T.accent : T.line}`,
-              background: settings.defaultMode === m ? T.tint : 'transparent',
-              color: settings.defaultMode === m ? T.accent : T.muted,
-            }}
-          >
-            {m === 'review' ? 'Review' : 'Explain'}
-          </button>
-        ))}
       </div>
 
       <button

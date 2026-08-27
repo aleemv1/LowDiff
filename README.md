@@ -3,15 +3,13 @@
 AI review annotations layered over GitHub pull request diffs. Inline `✦` badges on
 changed lines, a PR-level summary, and a chat panel grounded in the diff.
 
-One scan per pull request, two views of it, toggled in the overlay header:
-
-- **Review** — problems only: risk, security, breaking. A clean PR gets zero
-  badges, and that's a correct outcome, not a broken one.
-- **Explain** — adds the notes, suggestions, and performance observations that
-  walk someone unfamiliar with the codebase through the change.
-
-Switching views is instant — it filters the one cached scan rather than paying
-for another.
+One scan per pull request covers both jobs: problems (risk, security,
+breaking — held to a "false alarm costs more than a missed nit" bar, so a
+clean PR gets zero problem badges and that's correct) and understanding (the
+notes, suggestions, and performance observations that walk someone unfamiliar
+with the codebase through the change). The toolbar popup dials how much of
+that you see — problems only through everything — instantly, by filtering the
+one cached scan rather than paying for another.
 
 Bring your own credentials: an API key for Anthropic, OpenAI, or Google — or a
 connected Google account with no key at all. Nothing is hosted, so nobody pays
@@ -58,20 +56,19 @@ Then open any pull request's **Files changed** (or **Changes**) tab.
 
 ## Using it
 
-- **The summary card** sits above the diff: a two-sentence verdict, count chips
-  per note kind, and the Review/Explain toggle. `↻` re-runs against the current
-  commit; results are cached per head SHA, so revisiting a PR is free.
-- **`✦` badges** mark annotated lines, colour-coded by kind, aligned in the
-  gutter. Unread badges pulse gently; a badge stops for good once you've opened
-  it.
+- **The summary card** sits above the diff: a two-sentence verdict and count
+  chips per note kind. `↻` re-runs against the current commit; results are
+  cached per head SHA, so revisiting a PR is free.
+- **`✦` badges** trail the end of each annotated line, colour-coded by kind.
+  Unread badges pulse gently; a badge stops for good once you've opened it.
 - **Click a badge** for the note: what's wrong, where (`file:line`), how far to
   trust it ("depends on code not in this diff"), and — when the model has one —
   a block labelled **SUGGESTED FIX** with a Copy button.
 - **Chat** (the floating `✦` button, or "Ask about this" in a note) opens a
   panel grounded in the diff and the review. Enter sends, Shift+Enter breaks
   the line. With the daemon connected it searches your local repos too.
-- **The toolbar popup** filters which note kinds show (problems only → ⋯ →
-  everything) and sets the default view.
+- **The toolbar popup** filters which note kinds show: problems only → ⋯ →
+  everything.
 
 ## Layout
 

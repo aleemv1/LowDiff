@@ -49,7 +49,7 @@ await page.waitForTimeout(200);
 const persisted = await worker.evaluate(async () => {
   const stored = await chrome.storage.local.get('lowdiff:settings');
   const s = stored['lowdiff:settings'];
-  return { provider: s.provider, model: s.model, mode: s.defaultMode, hidden: s.hiddenKinds };
+  return { provider: s.provider, model: s.model, hidden: s.hiddenKinds };
 });
 console.log('persisted after clicks:', JSON.stringify(persisted));
 

@@ -84,7 +84,7 @@ if (!worker) {
 // review path is covered by e2e/review.mjs.
 await worker.evaluate(async (apiKey) => {
   await chrome.storage.local.set({
-    'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey }, defaultMode: 'review' },
+    'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey } },
     'lowdiff:review:v8:acme/demo#1@fixture': {
       summary: 'The file is prefixed with a crypto wallet address inside `python-package-conda.yml`, making the YAML invalid.',
       headSha: 'fixture',
@@ -296,23 +296,6 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 
-// One scan, two views: the default Review view hides the seeded SUGGESTION;
-// switching to Explain reveals it instantly — a lens change, not a re-scan.
-const explainView = await page.evaluate(async () => {
-  const host = document.getElementById('lowdiff-root');
-  const explain = [...(host?.shadowRoot?.querySelectorAll('button') ?? [])].find(
-    (b) => b.textContent === 'Explain',
-  );
-  explain?.click();
-  await new Promise((r) => setTimeout(r, 900));
-  return {
-    badges: document.querySelectorAll('[data-lowdiff-badge]').length,
-    chips: [...(host?.shadowRoot?.querySelectorAll('button.pill') ?? [])].map((b) =>
-      b.textContent?.trim(),
-    ),
-  };
-});
-
 // Toggle a kind off via settings, as the popup does, and confirm the overlay
 // reacts without any reload.
 await worker.evaluate(async () => {
@@ -397,7 +380,7 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 console.log(
-  JSON.stringify({ ...state, popover, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, explainView, filtered, autofocus, refocus, chatKeys }, null, 2),
+  JSON.stringify({ ...state, popover, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
