@@ -239,8 +239,9 @@ describe('badge placement in the gutter', () => {
       () => {},
     );
     const badge = document.querySelector('[data-lowdiff-badge]')!;
-    expect(badge.parentElement!.className).toContain('blob-code');
-    expect(badge.parentElement!.lastElementChild).toBe(badge);
+    // Inside the code cell — possibly within the final syntax span, which is
+    // where the last visible character lives.
+    expect(badge.closest('.blob-code')).not.toBeNull();
   });
 
   it('classic: the code text is left untouched', () => {
@@ -276,6 +277,33 @@ describe('badge placement in the gutter', () => {
     expect(placed).toBe(1);
     const badge = document.querySelector('[data-lowdiff-badge]')!;
     expect(badge.parentElement!.className).toContain('blob-code-inner');
+  });
+
+  it('lands before a trailing newline, not after it', () => {
+    // Real GitHub code cells end with "\n" under white-space: pre; an anchor
+    // appended after it renders at the start of the NEXT visual line.
+    document.documentElement.innerHTML = `
+      <div class="file" data-tagsearch-path="src/nl.ts">
+        <table><tbody>
+          <tr>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-code"><span class="blob-code-inner">const x = 1;
+</span></td>
+          </tr>
+        </tbody></table>
+      </div>`;
+    clearBadges();
+    syncBadges(
+      [note({ anchor: { path: 'src/nl.ts', side: 'RIGHT', line: 1, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    const after = badge.nextSibling;
+    expect(after?.nodeType).toBe(Node.TEXT_NODE);
+    expect(after?.textContent).toMatch(/^\s*$/);
+    expect(badge.previousSibling?.textContent).toContain('const x = 1;');
   });
 
   it('anchors with zero width so text wrapping cannot move it', () => {
