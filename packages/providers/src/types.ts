@@ -1,4 +1,4 @@
-import type { FileDiff, Note, PrRef } from '@lowdiff/core';
+import type { ContextFile, FileDiff, Note, PrRef } from '@lowdiff/core';
 
 export type ProviderId = 'anthropic' | 'openai' | 'google';
 
@@ -26,6 +26,8 @@ export interface AnnotateRequest {
   title: string;
   body: string;
   files: FileDiff[];
+  /** Whole changed files, for understanding; the model may not cite them. */
+  context?: ContextFile[];
   signal?: AbortSignal;
 }
 

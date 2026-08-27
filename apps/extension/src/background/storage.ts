@@ -29,6 +29,7 @@ export function toPublicSettings(settings: Settings): PublicSettings {
       Boolean(settings.keys[settings.provider]) ||
       (settings.provider === 'google' && Boolean(settings.googleAccount)) ||
       (settings.provider === 'openai' && Boolean(settings.openaiTokens)),
+    deepAvailable: Boolean(settings.daemonToken),
     hiddenKinds: settings.hiddenKinds ?? [],
   };
 }

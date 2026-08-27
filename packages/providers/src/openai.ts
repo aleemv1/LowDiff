@@ -39,7 +39,7 @@ export class OpenAIClient implements LlmClient {
         model: this.model,
         messages: [
           { role: 'system', content: systemPrompt() },
-          { role: 'user', content: userPrompt(req.files, req.title, req.body) },
+          { role: 'user', content: userPrompt(req.files, req.title, req.body, req.context) },
         ],
         response_format: {
           type: 'json_schema',

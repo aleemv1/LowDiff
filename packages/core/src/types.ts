@@ -113,3 +113,9 @@ export interface ReviewResult {
   /** Head SHA the notes were generated against. */
   headSha: string;
 }
+
+/** A whole file handed to the model for understanding; never citable. */
+export interface ContextFile {
+  path: string;
+  content: string;
+}

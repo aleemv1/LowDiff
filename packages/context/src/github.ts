@@ -1,5 +1,5 @@
 import { parsePatch } from '@lowdiff/core';
-import type { FileDiff, PrRef, RepoRef } from '@lowdiff/core';
+import type { ContextFile, FileDiff, PrRef, RepoRef } from '@lowdiff/core';
 import type { CodeHit, ContextProvider, PrMeta } from './types.js';
 
 const API = 'https://api.github.com';
@@ -152,6 +152,35 @@ export class GitHubContextProvider implements ContextProvider {
       line: 1,
       text: '',
     }));
+  }
+
+  /**
+   * Full contents of the changed files at the head commit, as understanding
+   * context for the scan. Best-effort by design: a file that is removed,
+   * binary (no hunks), oversized, or unfetchable is simply omitted — worse
+   * context must never cost the review itself.
+   */
+  async getContext(pr: PrRef, files: readonly FileDiff[]): Promise<ContextFile[]> {
+    const PER_FILE_MAX = 60_000;
+    const TOTAL_MAX = 240_000;
+
+    const wanted = files.filter((f) => f.status !== 'removed' && f.hunks.length > 0);
+    const out: ContextFile[] = [];
+    let budget = TOTAL_MAX;
+
+    for (const file of wanted) {
+      if (budget <= 0) break;
+      let content: string;
+      try {
+        content = await this.getFile(pr, file.path, pr.headSha);
+      } catch {
+        continue;
+      }
+      if (!content || content.length > PER_FILE_MAX || content.length > budget) continue;
+      budget -= content.length;
+      out.push({ path: file.path, content });
+    }
+    return out;
   }
 
   async getFile(repo: RepoRef, path: string, ref: string): Promise<string> {

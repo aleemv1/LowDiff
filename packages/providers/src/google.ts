@@ -43,7 +43,7 @@ export class GoogleClient implements LlmClient {
   async annotate(req: AnnotateRequest): Promise<AnnotateResponse> {
     const response = await this.client.models.generateContent({
       model: this.model,
-      contents: userPrompt(req.files, req.title, req.body),
+      contents: userPrompt(req.files, req.title, req.body, req.context),
       config: {
         systemInstruction: systemPrompt(),
         responseMimeType: 'application/json',

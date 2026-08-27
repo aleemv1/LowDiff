@@ -1,4 +1,4 @@
-import { anchorNotes, reanchor } from '@lowdiff/core';
+import { anchorNotes, reanchor, symbolsFromDiff } from '@lowdiff/core';
 import { DaemonClient, GitHubContextProvider } from '@lowdiff/context';
 import { createLlmClient } from '@lowdiff/providers';
 import type { AuthConfig } from '@lowdiff/providers/types';
@@ -46,7 +46,7 @@ async function handle(
       return { ok: true, settings: toPublicSettings(settings) };
     }
     case 'ANNOTATE':
-      return annotate(message.pr, message.refresh ?? false);
+      return annotate(message.pr, message.refresh ?? false, message.deep ?? false);
     case 'CHAT':
       await chat(message.pr, message.question, message.history, message.port);
       return { ok: true };
@@ -95,7 +95,7 @@ async function resolveAuth(settings: Awaited<ReturnType<typeof loadSettings>>): 
   throw new Error(`No API key set for ${settings.provider}. Open LowDiff options to add one.`);
 }
 
-async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply> {
+async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise<AnnotateReply> {
   const settings = await loadSettings();
   const auth = await resolveAuth(settings);
 
@@ -105,7 +105,7 @@ async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply
   const meta = await github.getPr(pr);
   const ref = { ...pr, headSha: meta.headSha };
 
-  if (!refresh) {
+  if (!refresh && !deep) {
     const cached = await readCache(pr.owner, pr.repo, pr.number, meta.headSha);
     if (cached) {
       return {
@@ -124,6 +124,29 @@ async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply
     return { ok: false, error: 'This pull request has no textual diff to review.' };
   }
 
+  // Whole-file context, so the model sees how the change sits in its files.
+  // Best-effort: worse context must never cost the review itself.
+  const context = await github.getContext(ref, files).catch(() => []);
+
+  // Deep scan: grep the registered local checkouts for the symbols this diff
+  // defines, so the model sees who calls the code being changed.
+  if (deep && settings.daemonToken) {
+    const daemon = new DaemonClient({ token: settings.daemonToken });
+    const repos = (await daemon.health()) ?? [];
+    if (repos.length > 0) {
+      for (const symbol of symbolsFromDiff(files)) {
+        try {
+          const matches = await daemon.search(symbol);
+          if (matches.trim()) {
+            context.push({ path: `repo search: ${symbol}`, content: matches.slice(0, 8000) });
+          }
+        } catch {
+          // One failed lookup is not worth a failed review.
+        }
+      }
+    }
+  }
+
   const llm = createLlmClient({
     provider: settings.provider,
     auth,
@@ -135,6 +158,7 @@ async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply
     title: meta.title,
     body: meta.body,
     files,
+    ...(context.length > 0 ? { context } : {}),
   });
 
   // Ground the model's claims against the diff it was actually shown.

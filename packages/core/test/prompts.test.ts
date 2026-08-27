@@ -57,6 +57,17 @@ describe('systemPrompt', () => {
 });
 
 describe('userPrompt', () => {
+  it('appends full-file context marked as uncitable', () => {
+    const p = userPrompt(files, 't', 'b', [{ path: 'src/a.ts', content: 'whole file' }]);
+    expect(p).toContain('=== CONTEXT FILE: src/a.ts ===');
+    expect(p).toContain('whole file');
+    expect(p).toMatch(/understanding only[\s\S]*cite only lines from the diff/i);
+  });
+
+  it('adds no context section when there is none', () => {
+    expect(userPrompt(files, 't', 'b')).not.toContain('CONTEXT FILE');
+  });
+
   it('includes the PR title and description', () => {
     const p = userPrompt(files, 'fix: debounce', 'Fixes #398');
     expect(p).toContain('PR title: fix: debounce');

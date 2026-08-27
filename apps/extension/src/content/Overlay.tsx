@@ -79,6 +79,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
   const [hiddenKinds, setHiddenKinds] = useState<NoteKind[]>([]);
+  const [deepAvailable, setDeepAvailable] = useState(false);
   const [cached, setCached] = useState(false);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +162,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, [visibleNotes, hiddenKinds, select]);
 
   const run = useCallback(
-    async (refresh: boolean) => {
+    async (refresh: boolean, deep = false) => {
       if (orphaned()) {
         setBusy(false);
         setError(REFRESH_HINT);
@@ -176,6 +177,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
           type: 'ANNOTATE',
           pr,
           refresh,
+          deep,
         })) as AnnotateReply;
       } catch (cause) {
         setBusy(false);
@@ -243,7 +245,10 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
 
-      if (reply.ok) setHiddenKinds(reply.settings.hiddenKinds);
+      if (reply.ok) {
+        setHiddenKinds(reply.settings.hiddenKinds);
+        setDeepAvailable(reply.settings.deepAvailable);
+      }
 
       if (reply.ok && !reply.settings.configured) {
         setBusy(false);
@@ -374,6 +379,8 @@ export function Overlay({ pr, overlayRoot }: Props) {
         cached={cached}
         busy={busy}
         onRefresh={() => void run(true)}
+        deepAvailable={deepAvailable}
+        onDeep={() => void run(true, true)}
       />
 
       {notesHidden > 0 && !busy && (

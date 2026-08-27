@@ -94,11 +94,15 @@ async function main(): Promise<void> {
 
   const llm = createLlmClient({ provider, auth: { kind: 'apiKey', key } });
   const started = Date.now();
+  const context = await github
+    .getContext({ ...location, headSha: meta.headSha }, withDiff)
+    .catch(() => []);
   const result = await llm.annotate({
     pr: { ...location, headSha: meta.headSha },
     title: meta.title,
     body: meta.body,
     files: withDiff,
+    ...(context.length > 0 ? { context } : {}),
   });
   const elapsed = ((Date.now() - started) / 1000).toFixed(1);
 

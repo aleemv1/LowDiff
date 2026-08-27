@@ -40,6 +40,8 @@ export interface PublicSettings {
   provider: ProviderId;
   model?: string | undefined;
   configured: boolean;
+  /** A daemon token exists, so a deep scan can search local checkouts. */
+  deepAvailable: boolean;
   hiddenKinds: NoteKind[];
 }
 
@@ -51,7 +53,7 @@ export interface PrLocation {
 
 export type Request =
   | { type: 'GET_PUBLIC_SETTINGS' }
-  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean }
+  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean; deep?: boolean }
   | {
       type: 'CHAT';
       pr: PrLocation;

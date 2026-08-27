@@ -94,7 +94,7 @@ const memory = new Map<string, unknown>();
       if (message.type === 'GET_PUBLIC_SETTINGS') {
         return {
           ok: true,
-          settings: { provider: 'anthropic', configured: true },
+          settings: { provider: 'anthropic', configured: true, deepAvailable: false },
         };
       }
       if (message.type === 'ANNOTATE') {

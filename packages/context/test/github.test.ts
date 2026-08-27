@@ -207,3 +207,50 @@ describe('GitHubContextProvider retries', () => {
     expect(calls).toBe(1);
   });
 });
+
+describe('GitHubContextProvider.getContext', () => {
+  const b64 = (text: string) => btoa(text);
+  const files = (over: Record<string, unknown> = {}) => [
+    { path: 'src/a.ts', status: 'modified', additions: 1, deletions: 0, hunks: [{}], ...over },
+  ];
+
+  it('fetches the full contents of changed files at the head commit', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch((url) => ({
+        body: url.includes('/contents/')
+          ? { content: b64('const a = 1;'), encoding: 'base64' }
+          : {},
+      })),
+    });
+    const ctx = await provider.getContext(PR, files() as never);
+    expect(ctx).toEqual([{ path: 'src/a.ts', content: 'const a = 1;' }]);
+  });
+
+  it('skips removed files and files whose diff carried no hunks', async () => {
+    const provider = new GitHubContextProvider({ fetchImpl: fakeFetch(() => ({ body: {} })) });
+    const ctx = await provider.getContext(PR, [
+      { path: 'gone.ts', status: 'removed', additions: 0, deletions: 3, hunks: [{}] },
+      { path: 'image.png', status: 'added', additions: 0, deletions: 0, hunks: [] },
+    ] as never);
+    expect(ctx).toEqual([]);
+  });
+
+  it('omits oversized files rather than truncating them mid-function', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch(() => ({ body: { content: b64('x'.repeat(70_000)), encoding: 'base64' } })),
+    });
+    const ctx = await provider.getContext(PR, files() as never);
+    expect(ctx).toEqual([]);
+  });
+
+  it('keeps fetch failures out of the result instead of failing the scan', async () => {
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch((url) => (url.includes('bad.ts') ? { status: 404 } : { body: { content: b64('ok'), encoding: 'base64' } })),
+    });
+    const ctx = await provider.getContext(PR, [
+      ...files(),
+      { path: 'bad.ts', status: 'modified', additions: 1, deletions: 0, hunks: [{}] },
+    ] as never);
+    expect(ctx).toEqual([{ path: 'src/a.ts', content: 'ok' }]);
+  });
+});

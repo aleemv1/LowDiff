@@ -47,12 +47,22 @@ requests/hour; a fine-grained read-only token (Contents, Pull requests,
 Metadata) raises that to 5,000 and unlocks private repos. Paste it under
 **Advanced** on the options page.
 
-**4. (Optional) Local repo search for chat.** Run `npm run daemon` in this repo
-and paste the token it prints into **Advanced**. Chat can then grep and read
-your local checkouts while answering; without it, chat sees only the pull
-request.
+**4. (Optional) Local repo search.** Run `npm run daemon` in this repo and
+paste the token it prints into **Advanced**. Chat can then grep and read your
+local checkouts while answering, and the card grows a **🔍 deep** button that
+re-scans with repository search results included.
 
 Then open any pull request's **Files changed** (or **Changes**) tab.
+
+## What the scan sees
+
+Every scan gets the PR title and description, the diff, and the **full
+contents of the changed files** (fetched at the head commit, size-capped) so
+the model sees whole functions rather than hunk fragments. A **deep scan**
+(the 🔍 button, needs the daemon) additionally greps your local checkouts for
+the symbols the diff defines and hands the call sites to the model — "who
+uses this code" grounding. Context is strictly read-only: notes may only cite
+lines that appear in the diff itself.
 
 ## Using it
 

@@ -1,4 +1,4 @@
-import type { FileDiff, Mode } from './types.js';
+import type { ContextFile, FileDiff } from './types.js';
 
 /**
  * Shared rules. Kept byte-stable and placed first in every request so it sits
@@ -101,9 +101,14 @@ export function renderDiff(files: readonly FileDiff[]): string {
   return out.join('\n');
 }
 
-export function userPrompt(files: readonly FileDiff[], title: string, body: string): string {
+export function userPrompt(
+  files: readonly FileDiff[],
+  title: string,
+  body: string,
+  context?: readonly ContextFile[],
+): string {
   const description = body.trim() ? body.trim() : '(no description)';
-  return `PR title: ${title}
+  const head = `PR title: ${title}
 
 PR description:
 ${description}
@@ -111,4 +116,20 @@ ${description}
 Columns below are: left line, right line, marker, content.
 
 ${renderDiff(files)}`;
+
+  if (!context || context.length === 0) return head;
+
+  // Whole files come AFTER the diff so the citable material leads, and the
+  // rule is restated beside the content it governs.
+  const sections = context
+    .map((file) => `=== CONTEXT FILE: ${file.path} ===\n${file.content}`)
+    .join('\n\n');
+  return `${head}
+
+Context follows, for understanding only — whole changed files (how the
+changed lines sit inside their functions) and, when present, repository
+search results showing where the changed symbols are used. You must still
+cite only lines from the diff above; context sections are not citable.
+
+${sections}`;
 }

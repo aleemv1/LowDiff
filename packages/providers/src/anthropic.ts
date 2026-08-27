@@ -51,7 +51,7 @@ export class AnthropicClient implements LlmClient {
           },
         ],
         messages: [
-          { role: 'user', content: userPrompt(req.files, req.title, req.body) },
+          { role: 'user', content: userPrompt(req.files, req.title, req.body, req.context) },
         ],
         output_config: {
           format: { type: 'json_schema', schema: toAnthropicJsonSchema(noteSchema()) },
