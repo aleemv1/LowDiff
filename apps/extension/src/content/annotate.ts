@@ -117,16 +117,43 @@ export function syncBadges(
       // that opened the popover, which anything scroll-sensitive misreads.
       badge.addEventListener('mousedown', (event) => event.preventDefault());
 
-      // Trails the code text, where the reader's eye finishes the line. As
-      // an inline-flex marker it holds no layout opinion — the earlier
-      // in-cell breakage came from injecting a block-shaped, absolutely
-      // positioned badge.
-      target.codeCell.append(badge);
+      // Trails the code text, where the reader's eye finishes the line —
+      // BEFORE any trailing newline. GitHub's cells render white-space: pre
+      // and end with "\n"; an anchor appended after it starts the next
+      // visual line instead of ending this one.
+      insertAtLineEnd(target.codeCell, badge);
       placed++;
     }
   }
 
   return placed;
+}
+
+/**
+ * Append at the visual end of the line: descend to the deepest last node,
+ * and when it is text with a trailing newline, land just before that tail.
+ */
+function insertAtLineEnd(cell: HTMLElement, badge: HTMLElement): void {
+  let node: ChildNode | null = cell;
+  while (node && node.nodeType === Node.ELEMENT_NODE && (node as Element).lastChild) {
+    node = (node as Element).lastChild;
+  }
+  if (node && node !== cell && node.nodeType === Node.TEXT_NODE && node.parentNode) {
+    const text = node.textContent ?? '';
+    const tail = /\n\s*$/.exec(text);
+    if (tail) {
+      if (tail.index === 0) {
+        node.parentNode.insertBefore(badge, node);
+      } else {
+        (node as Text).splitText(tail.index);
+        node.parentNode.insertBefore(badge, node.nextSibling);
+      }
+      return;
+    }
+    node.parentNode.insertBefore(badge, node.nextSibling);
+    return;
+  }
+  cell.append(badge);
 }
 
 const HIGHLIGHT_ATTR = 'data-lowdiff-highlit';
