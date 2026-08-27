@@ -291,3 +291,19 @@ describe('GitHubContextProvider import context', () => {
     expect(ctx.map((f) => f.path)).toEqual(['src/a.ts']);
   });
 });
+
+describe('GitHubContextProvider path encoding', () => {
+  it('percent-encodes hostile filename characters, keeping the slashes', async () => {
+    const urls: string[] = [];
+    const provider = new GitHubContextProvider({
+      fetchImpl: fakeFetch((url) => {
+        urls.push(url);
+        return { body: { content: btoa('x'), encoding: 'base64' } };
+      }),
+    });
+    // Git allows ? and # in filenames; interpolated raw they rewrite the
+    // query and fragment of a credentialed request.
+    await provider.getFile(PR, 'dir/a?b#c.ts', 'abc123');
+    expect(urls[0]).toContain('/contents/dir/a%3Fb%23c.ts?ref=abc123');
+  });
+});

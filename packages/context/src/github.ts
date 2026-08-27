@@ -216,8 +216,12 @@ export class GitHubContextProvider implements ContextProvider {
   }
 
   async getFile(repo: RepoRef, path: string, ref: string): Promise<string> {
+    // Filenames are attacker-controlled (git allows ? and #, and a PR chooses
+    // its own paths); interpolated raw they rewrite the query or fragment of
+    // a request that carries the user's token. Encode every segment.
+    const safePath = path.split('/').map(encodeURIComponent).join('/');
     const data = await this.request<{ content?: string; encoding?: string }>(
-      `/repos/${repo.owner}/${repo.repo}/contents/${path}?ref=${encodeURIComponent(ref)}`,
+      `/repos/${repo.owner}/${repo.repo}/contents/${safePath}?ref=${encodeURIComponent(ref)}`,
     );
     if (!data.content) return '';
     return data.encoding === 'base64' ? atob(data.content.replace(/\n/g, '')) : data.content;
