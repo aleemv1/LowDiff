@@ -15,7 +15,6 @@ interface Props {
   contextChips: string[];
   onInput: (value: string) => void;
   onSend: () => void;
-  onAddRepo: (path: string) => void;
   onClose: () => void;
 }
 
@@ -116,16 +115,6 @@ export function ChatPanel(props: Props) {
                 @ {chip}
               </span>
             ))}
-            <span
-              title="Add a local repo for the AI to search (requires lowdiff-daemon)"
-              onClick={() => {
-                const path = prompt('Absolute path of a local repo to add for context:');
-                if (path) props.onAddRepo(path);
-              }}
-              style={{ color: C.faint, font: `600 11px 'DM Sans',sans-serif`, cursor: 'pointer', padding: '1px 6px', borderRadius: '4px', border: `1px solid ${C.line}` }}
-            >
-              +
-            </span>
           </div>
 
           <textarea

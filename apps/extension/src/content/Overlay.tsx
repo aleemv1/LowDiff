@@ -83,7 +83,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState<Note[]>([]);
   const [hiddenKinds, setHiddenKinds] = useState<NoteKind[]>([]);
-  const [deepAvailable, setDeepAvailable] = useState(false);
   const [cached, setCached] = useState(false);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +95,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [input, setInput] = useState('');
   const [activity, setActivity] = useState<string | null>(null);
   const [usage, setUsage] = useState<string | null>(null);
-  const [repos, setRepos] = useState<string[]>([]);
 
   // One scan carries every kind; the popup's kind filter is the one lens
   // over it, so changing it is instant and free.
@@ -171,7 +169,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, [visibleNotes, hiddenKinds, select]);
 
   const run = useCallback(
-    async (refresh: boolean, deep = false) => {
+    async (refresh: boolean) => {
       if (orphaned()) {
         setBusy(false);
         setError(REFRESH_HINT);
@@ -186,7 +184,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
           type: 'ANNOTATE',
           pr,
           refresh,
-          deep,
         })) as AnnotateReply;
       } catch (cause) {
         setBusy(false);
@@ -225,17 +222,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
   }, []);
 
   useEffect(() => {
-    // Orphaned sendMessage throws synchronously — past the reach of .catch().
-    try {
-      void chrome.runtime
-        .sendMessage({ type: 'LIST_REPOS' })
-        .then((reply: { ok: boolean; repos?: string[] }) => {
-          if (reply.ok && reply.repos) setRepos(reply.repos);
-        })
-        .catch(() => {});
-    } catch {
-      // Repos stay empty; the card below reports the refresh hint.
-    }
     void (async () => {
       if (orphaned()) {
         setBusy(false);
@@ -254,10 +240,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
 
-      if (reply.ok) {
-        setHiddenKinds(reply.settings.hiddenKinds);
-        setDeepAvailable(reply.settings.deepAvailable);
-      }
+      if (reply.ok) setHiddenKinds(reply.settings.hiddenKinds);
 
       if (reply.ok && !reply.settings.configured) {
         setBusy(false);
@@ -371,8 +354,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         cached={cached}
         busy={busy}
         onRefresh={() => void run(true)}
-        deepAvailable={deepAvailable}
-        onDeep={() => void run(true, true)}
       />
 
       {notesHidden > 0 && !busy && (
@@ -445,17 +426,9 @@ export function Overlay({ pr, overlayRoot }: Props) {
           activity={activity}
           usage={usage}
           input={input}
-          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`, ...repos.map((r) => `repo:${r}`)]}
+          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`]}
           onInput={setInput}
           onSend={() => send(input)}
-          onAddRepo={(path) => {
-            void chrome.runtime.sendMessage({ type: 'ADD_REPO', path }).then((reply: { ok: boolean; repos?: string[]; error?: string }) => {
-              if (reply.ok && reply.repos) setRepos(reply.repos);
-              else if (!reply.ok) {
-                setMessages((prev) => [...prev, { role: 'assistant', content: `⚠ ${reply.error}` }]);
-              }
-            });
-          }}
           onClose={() => setChatOpen(false)}
         />
       ) : (

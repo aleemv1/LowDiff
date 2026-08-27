@@ -10,9 +10,6 @@ interface Props {
   cached: boolean;
   busy: boolean;
   onRefresh: () => void;
-  /** True when a daemon token exists, so a deep scan has repos to search. */
-  deepAvailable: boolean;
-  onDeep: () => void;
 }
 
 const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
@@ -83,17 +80,6 @@ export function SummaryCard(props: Props) {
         </span>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {props.deepAvailable && (
-            <button
-              class="btn btn-ghost"
-              style={{ padding: '4px 10px' }}
-              disabled={props.busy}
-              onClick={props.onDeep}
-              title="Deep scan: also search your local checkouts for how this code is used"
-            >
-              {props.busy ? '…' : '🔍 deep'}
-            </button>
-          )}
           <button
             class="btn btn-ghost"
             style={{ padding: '4px 10px' }}

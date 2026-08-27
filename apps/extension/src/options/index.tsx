@@ -216,7 +216,7 @@ function Options() {
             font: `600 12px 'DM Sans',sans-serif`, color: C.muted, cursor: 'pointer',
           }}
         >
-          {advanced ? '▾' : '▸'} Advanced — model override, local repo search
+          {advanced ? '▾' : '▸'} Advanced — model override
         </div>
 
         {advanced && (
@@ -229,18 +229,6 @@ function Options() {
               style={field}
             />
 
-            <label style={label}>DAEMON TOKEN (OPTIONAL)</label>
-            <input
-              type="password"
-              value={settings.daemonToken ?? ''}
-              placeholder="Lets chat search your local repos"
-              onInput={(e) => update({ daemonToken: (e.target as HTMLInputElement).value || undefined })}
-              style={field}
-            />
-            <p style={help}>
-              Run <code>npm run daemon</code> in the LowDiff repo and paste the token it prints.
-              Without it, chat sees only the pull request.
-            </p>
 
           </div>
         )}

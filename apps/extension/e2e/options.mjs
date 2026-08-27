@@ -61,7 +61,7 @@ const landing = await page.evaluate(() => ({
     (i) => i.placeholder.startsWith('Needed for private repos') && i.checkVisibility(),
   ),
   advancedCollapsed: ![...document.querySelectorAll('input')].some(
-    (i) => i.placeholder.startsWith('Lets chat search') && i.checkVisibility(),
+    (i) => i.placeholder.startsWith('claude-') && i.checkVisibility(),
   ),
   hasSaveButton: [...document.querySelectorAll('button')].some((b) => b.textContent === 'Save'),
 }));

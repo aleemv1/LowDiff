@@ -5,8 +5,6 @@ export interface Settings {
   provider: ProviderId;
   model?: string | undefined;
   githubToken?: string | undefined;
-  /** Token printed by lowdiff-daemon; enables repo search in chat. */
-  daemonToken?: string | undefined;
   /** Set per provider; never leaves the service worker. */
   keys: Partial<Record<ProviderId, string>>;
   /**
@@ -26,8 +24,6 @@ export interface PublicSettings {
   provider: ProviderId;
   model?: string | undefined;
   configured: boolean;
-  /** A daemon token exists, so a deep scan can search local checkouts. */
-  deepAvailable: boolean;
   hiddenKinds: NoteKind[];
 }
 
@@ -39,7 +35,7 @@ export interface PrLocation {
 
 export type Request =
   | { type: 'GET_PUBLIC_SETTINGS' }
-  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean; deep?: boolean }
+  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean }
   | {
       type: 'CHAT';
       pr: PrLocation;
@@ -47,8 +43,6 @@ export type Request =
       history: ChatTurn[];
       port: string;
     }
-  | { type: 'ADD_REPO'; path: string }
-  | { type: 'LIST_REPOS' }
   | { type: 'OPEN_OPTIONS' };
 
 export interface ChatTurn {
@@ -70,7 +64,6 @@ export interface Failure {
   error: string;
 }
 
-export type ReposReply = { ok: true; repos: string[] } | Failure;
 
 export type AnnotateReply = AnnotateOk | Failure;
 export type PublicSettingsReply = { ok: true; settings: PublicSettings } | Failure;

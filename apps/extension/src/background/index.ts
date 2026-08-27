@@ -1,12 +1,11 @@
-import { anchorNotes, reanchor, symbolsFromDiff } from '@lowdiff/core';
-import { DaemonClient, GitHubContextProvider } from '@lowdiff/context';
+import { anchorNotes, reanchor } from '@lowdiff/core';
+import { GitHubContextProvider } from '@lowdiff/context';
 // AnthropicClient directly, not createLlmClient: the factory pulls every
 // provider SDK into the worker bundle, and this release ships Anthropic only.
 import { AnthropicClient } from '@lowdiff/providers';
 import type {
   AnnotateReply,
   ChatTurn,
-  ReposReply,
   PrLocation,
   PublicSettingsReply,
   Request,
@@ -46,31 +45,17 @@ async function handle(
       return { ok: true, settings: toPublicSettings(settings) };
     }
     case 'ANNOTATE':
-      return annotate(message.pr, message.refresh ?? false, message.deep ?? false);
+      return annotate(message.pr, message.refresh ?? false);
     case 'CHAT':
       await chat(message.pr, message.question, message.history, message.port);
       return { ok: true };
-    case 'ADD_REPO': {
-      const settings = await loadSettings();
-      if (!settings.daemonToken) return { ok: false, error: 'Set the daemon token in options first.' };
-      const daemon = new DaemonClient({ token: settings.daemonToken });
-      const added = await daemon.addRepo(message.path);
-      const repos = (await daemon.health()) ?? [];
-      return { ok: true, repos: repos.length > 0 ? repos : [added] };
-    }
-    case 'LIST_REPOS': {
-      const settings = await loadSettings();
-      if (!settings.daemonToken) return { ok: true, repos: [] };
-      const repos = await new DaemonClient({ token: settings.daemonToken }).health();
-      return { ok: true, repos: repos ?? [] };
-    }
     case 'OPEN_OPTIONS':
       await chrome.runtime.openOptionsPage();
       return { ok: true };
   }
 }
 
-async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise<AnnotateReply> {
+async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply> {
   const settings = await loadSettings();
   const key = settings.keys.anthropic;
   if (!key) throw new Error('No Anthropic API key set. Open LowDiff options to add one.');
@@ -81,7 +66,7 @@ async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise
   const meta = await github.getPr(pr);
   const ref = { ...pr, headSha: meta.headSha };
 
-  if (!refresh && !deep) {
+  if (!refresh) {
     const cached = await readCache(pr.owner, pr.repo, pr.number, meta.headSha);
     if (cached) {
       return {
@@ -104,24 +89,6 @@ async function annotate(pr: PrLocation, refresh: boolean, deep = false): Promise
   // Best-effort: worse context must never cost the review itself.
   const context = await github.getContext(ref, files).catch(() => []);
 
-  // Deep scan: grep the registered local checkouts for the symbols this diff
-  // defines, so the model sees who calls the code being changed.
-  if (deep && settings.daemonToken) {
-    const daemon = new DaemonClient({ token: settings.daemonToken });
-    const repos = (await daemon.health()) ?? [];
-    if (repos.length > 0) {
-      for (const symbol of symbolsFromDiff(files)) {
-        try {
-          const matches = await daemon.search(symbol);
-          if (matches.trim()) {
-            context.push({ path: `repo search: ${symbol}`, content: matches.slice(0, 8000) });
-          }
-        } catch {
-          // One failed lookup is not worth a failed review.
-        }
-      }
-    }
-  }
 
   const llm = new AnthropicClient({
     provider: 'anthropic',
@@ -187,20 +154,6 @@ async function chat(
   const port = pendingPorts.get(portName);
   if (!port) throw new Error('Chat connection closed before the answer started.');
 
-  // Repo search rides on the local daemon; a missing or dead daemon simply
-  // means chat runs diff-only, at no extra cost.
-  let tools;
-  if (settings.daemonToken) {
-    const daemon = new DaemonClient({ token: settings.daemonToken });
-    const repoNames = await daemon.health();
-    if (repoNames && repoNames.length > 0) {
-      tools = {
-        repoNames,
-        search: (query: string, repo?: string) => daemon.search(query, repo),
-        read: (repo: string, path: string, startLine?: number) => daemon.read(repo, path, startLine),
-      };
-    }
-  }
 
   try {
     for await (const delta of llm.chat({
@@ -212,7 +165,6 @@ async function chat(
       notes: review?.notes ?? [],
       history,
       question,
-      ...(tools ? { tools } : {}),
     })) {
       port.postMessage(delta);
     }

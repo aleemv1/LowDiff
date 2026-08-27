@@ -36,21 +36,14 @@ button to forget.
 repos work at 60 API requests/hour; a fine-grained read-only token (Contents,
 Pull requests, Metadata) raises that to 5,000 and unlocks private repos.
 
-**4. (Optional) Local repo search.** Run `npm run daemon` in this repo and
-paste the token it prints into **Advanced**. Chat can then grep and read your
-local checkouts while answering, and the card grows a **🔍 deep** button that
-re-scans with repository search results included.
-
 Then open any pull request's **Files changed** (or **Changes**) tab.
 
 ## What the scan sees
 
-Every scan gets the PR title and description, the diff, and the **full
-contents of the changed files** (fetched at the head commit, size-capped) so
-the model sees whole functions rather than hunk fragments. A **deep scan**
-(the 🔍 button, needs the daemon) additionally greps your local checkouts for
-the symbols the diff defines and hands the call sites to the model — "who
-uses this code" grounding. Context is strictly read-only: notes may only cite
+Every scan gets the PR title and description, the diff, the **full contents
+of the changed files** (fetched at the head commit, size-capped), and the
+files they import — so the model sees whole functions and what they build
+on, not hunk fragments. Context is strictly read-only: notes may only cite
 lines that appear in the diff itself.
 
 ## Using it
@@ -65,7 +58,7 @@ lines that appear in the diff itself.
   a block labelled **SUGGESTED FIX** with a Copy button.
 - **Chat** (the floating `✦` button, or "Ask about this" in a note) opens a
   panel grounded in the diff and the review. Enter sends, Shift+Enter breaks
-  the line. With the daemon connected it searches your local repos too.
+  the line.
 - **The toolbar popup** filters which note kinds show: problems only → ⋯ →
   everything.
 
@@ -76,7 +69,7 @@ packages/core       types, note schema, prompts, diff parsing, anchoring
 packages/providers  LlmClient adapters — anthropic | openai | google
 packages/context    ContextProvider — GitHub REST, plus the local daemon client
 apps/extension      MV3 extension: service worker + Preact overlay
-apps/daemon         localhost companion: repo search for chat
+apps/daemon         localhost companion: repo search (returns to the extension in phase 2)
 apps/cli            one-shot review of a PR URL from the terminal
 ```
 
@@ -128,6 +121,8 @@ the CLI and a future release.
 
 ## Roadmap
 
+- Phase 2: repo-wide context — chat search and deep scans over local
+  checkouts via `lowdiff-daemon` (built, currently unwired).
 - Firefox, note dismissal, spend caps.
 
 See [docs/DESIGN.md](docs/DESIGN.md) for the decisions behind all of this.
