@@ -165,32 +165,51 @@ export class GitHubContextProvider implements ContextProvider {
     const TOTAL_MAX = 240_000;
 
     const IMPORT_MAX = 10;
+    const CONCURRENCY = 6;
 
-    const wanted = files.filter((f) => f.status !== 'removed' && f.hunks.length > 0);
-    const out: ContextFile[] = [];
-    let budget = TOTAL_MAX;
-
-    const take = async (path: string): Promise<ContextFile | null> => {
-      if (budget <= 0) return null;
-      let content: string;
-      try {
-        content = await this.getFile(pr, path, pr.headSha);
-      } catch {
-        return null;
-      }
-      if (!content || content.length > PER_FILE_MAX || content.length > budget) return null;
-      budget -= content.length;
-      const entry = { path, content };
-      out.push(entry);
-      return entry;
+    // Fetch a batch concurrently (bounded — GitHub's secondary rate limits
+    // punish unbounded bursts), then apply the size budget in stable order.
+    // Serial fetching cost big PRs several seconds before the model started.
+    const fetchBatch = async (paths: readonly string[]): Promise<(ContextFile | null)[]> => {
+      const results: (ContextFile | null)[] = new Array(paths.length).fill(null);
+      let next = 0;
+      const worker = async () => {
+        for (;;) {
+          const at = next++;
+          if (at >= paths.length) return;
+          try {
+            const content = await this.getFile(pr, paths[at]!, pr.headSha);
+            if (content) results[at] = { path: paths[at]!, content };
+          } catch {
+            // Context is best-effort; a missing file never costs the review.
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, paths.length) }, worker));
+      return results;
     };
 
-    for (const file of wanted) await take(file.path);
+    const out: ContextFile[] = [];
+    let budget = TOTAL_MAX;
+    const admit = (entry: ContextFile | null) => {
+      if (!entry || entry.content.length > PER_FILE_MAX || entry.content.length > budget) return;
+      budget -= entry.content.length;
+      out.push(entry);
+    };
+
+    // The tree request is independent of the file fetches; overlap them.
+    const treePromise = this.getTree(pr).catch(() => null);
+    // A hundred-file PR would blow the byte budget anyway; don't spend the
+    // requests finding that out.
+    const wanted = files
+      .filter((f) => f.status !== 'removed' && f.hunks.length > 0)
+      .slice(0, 40);
+    for (const entry of await fetchBatch(wanted.map((f) => f.path))) admit(entry);
 
     // Follow the changed files' imports: what a file builds on is the next
     // most useful thing to show. One tree request lists every repo path, so
     // resolving './helper' is a set lookup, not trial-and-error fetches.
-    const tree = await this.getTree(pr).catch(() => null);
+    const tree = await treePromise;
     if (tree) {
       const have = new Set(out.map((f) => f.path));
       const found: string[] = [];
@@ -199,7 +218,7 @@ export class GitHubContextProvider implements ContextProvider {
           if (!have.has(imported) && !found.includes(imported)) found.push(imported);
         }
       }
-      for (const path of found.slice(0, IMPORT_MAX)) await take(path);
+      for (const entry of await fetchBatch(found.slice(0, IMPORT_MAX))) admit(entry);
     }
     return out;
   }
