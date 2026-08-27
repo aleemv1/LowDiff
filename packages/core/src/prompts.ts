@@ -59,14 +59,20 @@ not pad, and do not dress a nit up as a problem. Before emitting one, ask
 whether a reviewer seeing it would act on it; if they would dismiss it, drop
 it. A false alarm costs more than a missed nit.
 
-Understanding. Help a reviewer who is unfamiliar with this codebase, on the
-parts a newcomer would stumble on:
+Understanding. Help a reviewer who is unfamiliar with this codebase. The
+do-not-pad rule above applies to problems only — explanation is the one place
+to be generous. Aim for an EXPLAIN note on every hunk whose intent, mechanism,
+or consequence a newcomer could not reconstruct from the lines themselves:
+non-obvious API semantics, invisible side effects, why the change takes this
+shape. When a suggestion rests on something worth understanding, say the
+understanding part in an EXPLAIN note rather than burying it in the
+suggestion.
 - EXPLAIN: what this change does and why, when it is not obvious from the line.
 - PERF: a performance-relevant consequence.
 - SUGGESTION: a concrete improvement worth considering.
 Do not restate the line. "This adds a debounce" is worthless next to a line
 that says useDebounce. Explain the intent, the consequence, or the context the
-line does not carry on its own. If a hunk is self-evident, skip it.`;
+line does not carry on its own. If a hunk is truly self-evident, skip it.`;
 
 export function systemPrompt(): string {
   return FULL;

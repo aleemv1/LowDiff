@@ -46,6 +46,11 @@ describe('systemPrompt', () => {
     expect(systemPrompt()).toMatch(/backticks everywhere, the summary included/);
   });
 
+  it('keeps the anti-padding rule from muting explanation', () => {
+    expect(systemPrompt()).toMatch(/do-not-pad rule .* problems only/);
+    expect(systemPrompt()).toMatch(/EXPLAIN note on every hunk/);
+  });
+
   it('forbids citing unseen lines', () => {
     expect(systemPrompt()).toMatch(/Never cite a line you were not shown/);
   });
