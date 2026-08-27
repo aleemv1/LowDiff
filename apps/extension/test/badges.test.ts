@@ -306,6 +306,56 @@ describe('badge placement in the gutter', () => {
     expect(badge.previousSibling?.textContent).toContain('const x = 1;');
   });
 
+  it('survives an empty trailing element after the newline', () => {
+    // GitHub emits zero-length spans at syntax boundaries; the deepest-last
+    // node is then an element, not text, and the newline sits in an earlier
+    // sibling.
+    document.documentElement.innerHTML = `
+      <div class="file" data-tagsearch-path="src/m.ts">
+        <table><tbody>
+          <tr>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-code"><span class="blob-code-inner"><span>const x = 1;
+</span><span class="marker"></span></span></td>
+          </tr>
+        </tbody></table>
+      </div>`;
+    clearBadges();
+    syncBadges(
+      [note({ anchor: { path: 'src/m.ts', side: 'RIGHT', line: 1, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    expect(badge.previousSibling?.textContent).toBe('const x = 1;');
+  });
+
+  it('survives a whitespace-only trailing text node', () => {
+    // The last TEXT node is a bare space with no newline; the newline is one
+    // sibling earlier. Anchoring on "last text node" of any kind still lands
+    // on the next visual line.
+    document.documentElement.innerHTML = `
+      <div class="file" data-tagsearch-path="src/w.ts">
+        <table><tbody>
+          <tr>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-num" data-line-number="1"></td>
+            <td class="blob-code"><span class="blob-code-inner"><span>const y = 2;
+</span> </span></td>
+          </tr>
+        </tbody></table>
+      </div>`;
+    clearBadges();
+    syncBadges(
+      [note({ anchor: { path: 'src/w.ts', side: 'RIGHT', line: 1, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const badge = document.querySelector('[data-lowdiff-badge]')!;
+    expect(badge.previousSibling?.textContent).toBe('const y = 2;');
+  });
+
   it('anchors with zero width so text wrapping cannot move it', () => {
     // A badge with real width is a word to the wrapper: end a line near the
     // cell edge and the star wrapped onto its own visual line. A 0×0 inline

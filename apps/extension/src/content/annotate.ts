@@ -130,30 +130,35 @@ export function syncBadges(
 }
 
 /**
- * Append at the visual end of the line: descend to the deepest last node,
- * and when it is text with a trailing newline, land just before that tail.
+ * Append at the visual end of the line: after the last visible character.
+ * The anchor is the last text node containing non-whitespace — the trailing
+ * newline may live in a later sibling, and the deepest-last node may be an
+ * empty marker element, a <br>, or bare whitespace.
  */
-function insertAtLineEnd(cell: HTMLElement, badge: HTMLElement): void {
-  let node: ChildNode | null = cell;
-  while (node && node.nodeType === Node.ELEMENT_NODE && (node as Element).lastChild) {
-    node = (node as Element).lastChild;
-  }
-  if (node && node !== cell && node.nodeType === Node.TEXT_NODE && node.parentNode) {
-    const text = node.textContent ?? '';
-    const tail = /\n\s*$/.exec(text);
-    if (tail) {
-      if (tail.index === 0) {
-        node.parentNode.insertBefore(badge, node);
-      } else {
-        (node as Text).splitText(tail.index);
-        node.parentNode.insertBefore(badge, node.nextSibling);
-      }
-      return;
+function lastContentfulText(node: Node): Text | null {
+  // Hand-rolled rather than TreeWalker: the walk is trivial, and happy-dom
+  // (the test environment) does not implement TreeWalker text traversal.
+  let found: Text | null = null;
+  for (const child of node.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      if (/\S/.test(child.textContent ?? '')) found = child as Text;
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const inner = lastContentfulText(child);
+      if (inner) found = inner;
     }
-    node.parentNode.insertBefore(badge, node.nextSibling);
+  }
+  return found;
+}
+
+function insertAtLineEnd(cell: HTMLElement, badge: HTMLElement): void {
+  const anchor = lastContentfulText(cell);
+  if (!anchor?.parentNode) {
+    cell.append(badge);
     return;
   }
-  cell.append(badge);
+  const tail = /\s+$/.exec(anchor.textContent ?? '');
+  if (tail && tail.index > 0) anchor.splitText(tail.index);
+  anchor.parentNode.insertBefore(badge, anchor.nextSibling);
 }
 
 const HIGHLIGHT_ATTR = 'data-lowdiff-highlit';
