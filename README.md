@@ -57,10 +57,10 @@ lines that appear in the diff itself.
   trust it ("depends on code not in this diff"), and — when the model has one —
   a block labelled **SUGGESTED FIX** with a Copy button.
 - **Chat** (the floating `✦` button, or "Ask about this" in a note) opens a
-  panel grounded in the diff and the review. Enter sends, Shift+Enter breaks
-  the line.
-- **The toolbar popup** filters which note kinds show: problems only → ⋯ →
-  everything.
+  panel grounded in the diff, the review, and the full changed files. Enter
+  sends, Shift+Enter breaks the line.
+- **The toolbar popup** filters which note kinds show (problems only → ⋯ →
+  everything) and picks the model.
 
 ## Layout
 
@@ -110,6 +110,9 @@ Chromium against live GitHub and a saved copy of the client-rendered view.
   script GitHub loads.
 - Diffs come from the REST API, not scraped from the DOM. GitHub reships that
   markup regularly; a scraper breaks on their schedule.
+- What leaves your machine: the PR title, description, diff, and the capped
+  contents of changed + imported files go to Anthropic with your key; API
+  reads go to GitHub with your token. Nothing else, and nowhere else.
 
 ## Provider auth
 
