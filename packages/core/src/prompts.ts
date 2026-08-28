@@ -21,10 +21,11 @@ Writing rules:
   that matters most, if any. Do not restate the diff, list every finding, or
   explain your reasoning. A reviewer reads this in five seconds.
 - title: under 60 characters, states the finding, not the file.
-- body: under 600 characters, and shorter is better. Lead with the consequence
-  in plain language — what breaks, for whom — then the mechanism. Write for a
-  reader who does not know the flags, APIs, or jargon involved: one concrete
-  example beats an abstract rule. No preamble, no restating the line.
+- body: one to three short sentences, under 350 characters — a reviewer
+  reads it in a floating box over the diff. Lead with the consequence in
+  plain language — what breaks, for whom — then the mechanism. Write for a
+  reader who does not know the flags, APIs, or jargon involved. No preamble,
+  no restating the line; put anything longer in the code block, not prose.
 - body: may use fenced code blocks, \`backticks\`, and dash lists — all are
   rendered. When a body covers more than one case or step, break it into a
   short list instead of packing everything into one paragraph.

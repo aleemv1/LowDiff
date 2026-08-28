@@ -45,7 +45,7 @@ async function handle(
       return { ok: true, settings: toPublicSettings(settings) };
     }
     case 'ANNOTATE':
-      return annotate(message.pr, message.refresh ?? false);
+      return annotate(message.pr, message.refresh ?? false, message.onlyCached ?? false);
     case 'CHAT':
       await chat(message.pr, message.question, message.history, message.port);
       return { ok: true };
@@ -55,7 +55,7 @@ async function handle(
   }
 }
 
-async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply> {
+async function annotate(pr: PrLocation, refresh: boolean, onlyCached = false): Promise<AnnotateReply> {
   const settings = await loadSettings();
   const key = settings.keys.anthropic;
   if (!key) throw new Error('No Anthropic API key set. Open LowDiff options to add one.');
@@ -79,6 +79,10 @@ async function annotate(pr: PrLocation, refresh: boolean): Promise<AnnotateReply
       };
     }
   }
+
+  // Auto-scan off: a cached review is free to show, but a fresh one waits
+  // for the card's button.
+  if (onlyCached) return { ok: true, idle: true };
 
   const files = await github.getDiff(ref);
   if (files.every((f) => f.hunks.length === 0)) {

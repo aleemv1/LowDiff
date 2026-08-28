@@ -114,6 +114,28 @@ function Popup() {
         )}
       </div>
 
+      <label style={label}>SCAN</label>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {([true, false] as const).map((auto) => (
+          <button
+            key={String(auto)}
+            onClick={() => update({ autoScan: auto })}
+            style={{
+              flex: 1,
+              padding: '7px 0',
+              borderRadius: '7px',
+              cursor: 'pointer',
+              font: '600 11.5px inherit',
+              border: `1px solid ${(settings.autoScan ?? true) === auto ? T.accent : T.line}`,
+              background: (settings.autoScan ?? true) === auto ? T.tint : 'transparent',
+              color: (settings.autoScan ?? true) === auto ? T.accent : T.muted,
+            }}
+          >
+            {auto ? 'Every PR' : 'When I ask'}
+          </button>
+        ))}
+      </div>
+
       <label style={label}>MODEL</label>
       <select
         style={select}

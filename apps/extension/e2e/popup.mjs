@@ -41,6 +41,7 @@ await page.waitForTimeout(400);
 
 // Hide two kinds and pick a model; read back what persisted.
 await page.click('button:has-text("Problems only")');
+await page.click('button:has-text("When I ask")');
 await page.waitForTimeout(200);
 await page.selectOption('select', 'claude-sonnet-5');
 await page.waitForTimeout(200);
@@ -48,7 +49,7 @@ await page.waitForTimeout(200);
 const persisted = await worker.evaluate(async () => {
   const stored = await chrome.storage.local.get('lowdiff:settings');
   const s = stored['lowdiff:settings'];
-  return { model: s.model, hidden: s.hiddenKinds };
+  return { model: s.model, hidden: s.hiddenKinds, autoScan: s.autoScan };
 });
 console.log('persisted after clicks:', JSON.stringify(persisted));
 

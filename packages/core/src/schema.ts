@@ -2,7 +2,7 @@ import type { Mode, NoteKind, RawNote } from './types.js';
 import { EXPLAIN_KINDS, REVIEW_KINDS } from './types.js';
 
 export const TITLE_MAX = 60;
-export const BODY_MAX = 600;
+export const BODY_MAX = 350;
 
 /**
  * The JSON Schema every provider enforces natively (Anthropic `output_config`,

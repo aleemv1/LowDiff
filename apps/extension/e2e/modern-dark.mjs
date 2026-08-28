@@ -85,7 +85,7 @@ if (!worker) {
 await worker.evaluate(async (apiKey) => {
   await chrome.storage.local.set({
     'lowdiff:settings': { provider: 'anthropic', keys: { anthropic: apiKey } },
-    'lowdiff:review:v11:acme/demo#1@fixture': {
+    'lowdiff:review:v12:acme/demo#1@fixture': {
       summary: 'The file is prefixed with a crypto wallet address inside `python-package-conda.yml`, making the YAML invalid.',
       headSha: 'fixture',
       usage: { inputTokens: 0, outputTokens: 0 },
@@ -255,6 +255,55 @@ const pulse = await page.evaluate(async () => {
   return { whileOpen, afterClose };
 });
 
+// Important notes surface themselves: SECURITY and RISK strips sit under
+// their rows by default, dismiss per-session, and open the note on click.
+const strips = await page.evaluate(async () => {
+  const settle = () => new Promise((r) => setTimeout(r, 300));
+  const all = () => [...document.querySelectorAll('[data-lowdiff-inline]')];
+  const lines = all().map(
+    (el) =>
+      el.previousElementSibling
+        ?.querySelector('[data-line-number]')
+        ?.getAttribute('data-line-number') ?? null,
+  );
+  all()[0]?.querySelector('td span:last-child')?.click();
+  await settle();
+  const afterDismiss = all().length;
+  all()[0]?.querySelector('td')?.click();
+  await settle();
+  const root = document.getElementById('lowdiff-overlay-root')?.shadowRoot;
+  const popoverFromStrip = Boolean(root?.querySelector('[style*="440px"]'));
+  [...(root?.querySelectorAll('div,button,span') ?? [])]
+    .find((el) => el.textContent?.trim() === '✕')
+    ?.click();
+  await settle();
+  return { lines, afterDismiss, popoverFromStrip };
+});
+
+// ‹ › walk the findings in document order.
+const navProbe = await page.evaluate(async () => {
+  const settle = () => new Promise((r) => setTimeout(r, 250));
+  const host = document.getElementById('lowdiff-root');
+  const next = [...(host?.shadowRoot?.querySelectorAll('button') ?? [])].find(
+    (b) => b.title === 'Next finding',
+  );
+  const activeLine = () =>
+    [...document.querySelectorAll('[data-lowdiff-badge]')]
+      .find((b) => {
+        const dot = b.firstElementChild?.firstElementChild;
+        return dot instanceof HTMLElement && dot.style.transform.includes('scale');
+      })
+      ?.closest('[data-line-anchor]')
+      ?.getAttribute('data-line-number') ?? null;
+  next?.click();
+  await settle();
+  const first = activeLine();
+  next?.click();
+  await settle();
+  const second = activeLine();
+  return { hasNav: Boolean(next), first, second };
+});
+
 // Chips must share one height and centre line whatever their content —
 // emoji and plain-text pills get different line boxes without a fix.
 const chipGeometry = await page.evaluate(() => {
@@ -418,16 +467,39 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 
+// Auto-scan off + nothing cached: the card waits for its button.
+await worker.evaluate(async () => {
+  const stored = await chrome.storage.local.get('lowdiff:settings');
+  await chrome.storage.local.set({
+    'lowdiff:settings': { ...stored['lowdiff:settings'], autoScan: false, hiddenKinds: [] },
+  });
+  await chrome.storage.local.remove('lowdiff:review:v12:acme/demo#1@fixture');
+});
+await open(URL);
+await page.waitForTimeout(1800);
+const optIn = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  return {
+    scanButton: [...(root?.querySelectorAll('button') ?? [])].some((b) =>
+      b.textContent?.includes('Review this pull request'),
+    ),
+    reading: (root?.textContent ?? '').includes('Reading the diff'),
+  };
+});
+
 console.log(
-  JSON.stringify({ ...state, wrap, popover, flip, pulse, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
+  JSON.stringify({ ...state, wrap, popover, flip, pulse, strips, navProbe, optIn, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);
 
 {
   // Close-up of one badge and its surroundings, for eyeballing the glow.
+  // After the opt-in reload above there are no badges; skip in that case.
   const badge = page.locator('[data-lowdiff-badge]').first();
-  const box = await badge.boundingBox();
+  const box = (await page.locator('[data-lowdiff-badge]').count()) > 0
+    ? await badge.boundingBox()
+    : null;
   if (box) {
     await page.screenshot({
       path: '/tmp/lowdiff-badge-closeup.png',
