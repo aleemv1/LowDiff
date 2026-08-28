@@ -73,7 +73,6 @@ function isRawNote(value: unknown, kinds: readonly NoteKind[]): value is RawNote
     n['title'].length <= TITLE_MAX &&
     typeof n['body'] === 'string' &&
     n['body'].length > 0 &&
-    n['body'].length <= BODY_MAX &&
     (n['code'] === undefined || typeof n['code'] === 'string') &&
     (n['endLine'] === undefined ||
       n['endLine'] === null ||
@@ -109,6 +108,15 @@ export function parseResponse(value: unknown): ParsedResponse {
 
   return {
     summary: root['summary'],
-    notes: rawNotes.filter((n): n is RawNote => isRawNote(n, kinds)),
+    // Over-long bodies clamp rather than drop: provider-side maxLength
+    // usually prevents them, but losing a SECURITY finding to verbosity
+    // fails far harder than an ellipsis. Structural defects still drop.
+    notes: rawNotes
+      .filter((n): n is RawNote => isRawNote(n, kinds))
+      .map((n) =>
+        n.body.length <= BODY_MAX
+          ? n
+          : { ...n, body: `${n.body.slice(0, BODY_MAX - 1).replace(/\s+\S*$/, '')}…` },
+      ),
   };
 }

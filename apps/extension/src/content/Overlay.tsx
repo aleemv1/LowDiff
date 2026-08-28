@@ -228,6 +228,10 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
       setBusy(true);
+      // Leave the ask the moment any scan starts — from its Analyze button
+      // or from ↻ — or it keeps rendering over the progress and the error,
+      // and its still-live button can start a second billed scan.
+      setIdle(false);
       setError(null);
       let reply: AnnotateReply;
       try {

@@ -491,8 +491,42 @@ const optIn = await page.evaluate(() => {
   };
 });
 
+// Clicking Analyze must leave the ask immediately — progress while it
+// runs, the error when it fails, and no still-live button to double-bill.
+// An invalid key makes the failure fast and free.
+await worker.evaluate(async () => {
+  const stored = await chrome.storage.local.get('lowdiff:settings');
+  await chrome.storage.local.set({
+    'lowdiff:settings': { ...stored['lowdiff:settings'], keys: { anthropic: 'sk-ant-invalid' } },
+  });
+});
+await open(URL);
+await page.waitForTimeout(1500);
+await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  [...(root?.querySelectorAll('button') ?? [])].find((b) => b.textContent === 'Analyze')?.click();
+});
+await page.waitForTimeout(150);
+const askDuring = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  return {
+    askGone: !(root?.textContent ?? '').includes('Should I analyze it?'),
+    reading: (root?.textContent ?? '').includes('Reading the diff'),
+    analyzeGone: ![...(root?.querySelectorAll('button') ?? [])].some((b) => b.textContent === 'Analyze'),
+  };
+});
+await page.waitForTimeout(6000);
+const askAfterFail = await page.evaluate(() => {
+  const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  const text = root?.textContent ?? '';
+  return {
+    askStillGone: !text.includes('Should I analyze it?'),
+    errorShown: !text.includes('Reading the diff') && text.length > 0,
+  };
+});
+
 console.log(
-  JSON.stringify({ ...state, wrap, popover, flip, pulse, strips, navProbe, optIn, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
+  JSON.stringify({ ...state, wrap, popover, flip, pulse, strips, navProbe, optIn, askDuring, askAfterFail, chipGeometry, chatField, chatFieldAfter, chatNewline, filtered, autofocus, refocus, chatKeys }, null, 2),
 );
 console.log('\n--- logs ---');
 for (const l of logs) console.log(l);

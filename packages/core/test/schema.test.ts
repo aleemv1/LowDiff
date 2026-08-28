@@ -42,6 +42,16 @@ describe('parseResponse', () => {
     expect(r.notes).toEqual([]);
   });
 
+  it('clamps an over-long body instead of dropping the finding', () => {
+    // Provider-side maxLength usually prevents this, but is not guaranteed
+    // for every model — and losing a SECURITY note over verbosity fails
+    // much harder than an ellipsis.
+    const r = parseResponse({ summary: 's', notes: [{ ...good, body: 'word '.repeat(100) }] });
+    expect(r.notes).toHaveLength(1);
+    expect(r.notes[0]!.body.length).toBeLessThanOrEqual(350);
+    expect(r.notes[0]!.body.endsWith('…')).toBe(true);
+  });
+
   it('drops an over-long title rather than truncating it', () => {
     const r = parseResponse({ summary: 's', notes: [{ ...good, title: 'x'.repeat(61) }] });
     expect(r.notes).toEqual([]);
