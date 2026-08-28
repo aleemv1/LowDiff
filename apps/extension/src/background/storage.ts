@@ -28,7 +28,6 @@ export function toPublicSettings(settings: Settings): PublicSettings {
     provider: settings.provider,
     ...(settings.model !== undefined ? { model: settings.model } : {}),
     configured: Boolean(settings.keys.anthropic),
-    autoScan: settings.autoScan ?? true,
     hiddenKinds: settings.hiddenKinds ?? [],
   };
 }

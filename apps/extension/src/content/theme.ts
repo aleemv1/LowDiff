@@ -109,6 +109,11 @@ export const STYLES = `
 }
 
 @keyframes notePop { from { opacity: 0; transform: translateY(-6px) scale(.98) } to { opacity: 1; transform: none } }
+@keyframes askIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes askSparkle { 0%, 100% { transform: none } 50% { transform: rotate(14deg) scale(1.25) } }
+.ask { display: flex; align-items: center; gap: 10px; animation: askIn .35s cubic-bezier(.2,.7,.3,1) both; }
+.ask .spark { display: inline-block; color: var(--ld-accent-strong); animation: askSparkle 1.8s ease-in-out .4s infinite; }
+@media (prefers-reduced-motion: reduce) { .ask, .ask .spark { animation: none; } }
 @keyframes chatUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
 
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }

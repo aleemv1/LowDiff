@@ -289,7 +289,8 @@ export function Overlay({ pr, overlayRoot }: Props) {
         setError('LowDiff needs an API key before it can review this pull request.');
         return;
       }
-      await run(false, reply.ok && !reply.settings.autoScan);
+      // A cached review is free to show; a fresh scan asks first.
+      await run(false, true);
     })();
   }, [run]);
 

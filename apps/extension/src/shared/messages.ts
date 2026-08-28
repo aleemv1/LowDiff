@@ -7,8 +7,6 @@ export interface Settings {
   githubToken?: string | undefined;
   /** Set per provider; never leaves the service worker. */
   keys: Partial<Record<ProviderId, string>>;
-  /** Scan every PR on open, or wait for the card's button. Default: on. */
-  autoScan?: boolean | undefined;
   /**
    * Note kinds hidden from the overlay. Stored as the negative so new kinds
    * added later default to visible instead of silently vanishing.
@@ -26,7 +24,6 @@ export interface PublicSettings {
   provider: ProviderId;
   model?: string | undefined;
   configured: boolean;
-  autoScan: boolean;
   hiddenKinds: NoteKind[];
 }
 

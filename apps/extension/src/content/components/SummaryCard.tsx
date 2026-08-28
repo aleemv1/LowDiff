@@ -133,13 +133,19 @@ export function SummaryCard(props: Props) {
         >
           <div>
             {props.idle ? (
-              <button
-                class="btn btn-primary"
-                onClick={props.onScan}
-                style={{ font: `600 12px 'DM Sans',sans-serif` }}
-              >
-                ✦ Review this pull request
-              </button>
+              <div class="ask">
+                <span class="spark" style={{ fontSize: '15px' }}>✦</span>
+                <span style={{ font: `13px 'DM Sans',sans-serif`, color: C.ink }}>
+                  I see a pull request. Should I analyze it?
+                </span>
+                <button
+                  class="btn btn-primary"
+                  onClick={props.onScan}
+                  style={{ font: `600 12px 'DM Sans',sans-serif` }}
+                >
+                  Analyze
+                </button>
+              </div>
             ) : props.busy && props.notes.length === 0 ? (
               'Reading the diff…'
             ) : (

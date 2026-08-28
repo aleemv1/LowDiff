@@ -467,11 +467,12 @@ const chatKeys = await page.evaluate(() => {
 await page.waitForTimeout(300);
 
 
-// Auto-scan off + nothing cached: the card waits for its button.
+// An uncached PR asks first: the animated "should I analyze it?" line,
+// no scan started until the button.
 await worker.evaluate(async () => {
   const stored = await chrome.storage.local.get('lowdiff:settings');
   await chrome.storage.local.set({
-    'lowdiff:settings': { ...stored['lowdiff:settings'], autoScan: false, hiddenKinds: [] },
+    'lowdiff:settings': { ...stored['lowdiff:settings'], hiddenKinds: [] },
   });
   await chrome.storage.local.remove('lowdiff:review:v12:acme/demo#1@fixture');
 });
@@ -479,9 +480,12 @@ await open(URL);
 await page.waitForTimeout(1800);
 const optIn = await page.evaluate(() => {
   const root = document.getElementById('lowdiff-root')?.shadowRoot;
+  const ask = root?.querySelector('.ask');
   return {
-    scanButton: [...(root?.querySelectorAll('button') ?? [])].some((b) =>
-      b.textContent?.includes('Review this pull request'),
+    asks: (ask?.textContent ?? '').includes('Should I analyze it?'),
+    animated: ask ? getComputedStyle(ask).animationName !== 'none' : false,
+    analyzeButton: [...(root?.querySelectorAll('button') ?? [])].some(
+      (b) => b.textContent === 'Analyze',
     ),
     reading: (root?.textContent ?? '').includes('Reading the diff'),
   };
