@@ -167,15 +167,27 @@ export function Overlay({ pr, overlayRoot }: Props) {
     setOpen(null);
   }, []);
 
-  /** Walk the findings in document order, glowing each visited star. */
-  const navAt = useRef(-1);
+  /**
+   * Walk the findings in document order, glowing each visited star. The
+   * cursor is the note's identity, not a slot index: the badge list is
+   * rebuilt whenever the diff renders more rows or the kind filter changes,
+   * so an index would silently point at a different finding afterwards.
+   */
+  const navKey = useRef<string | null>(null);
   const nav = useCallback(
     (step: number) => {
       const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
       if (badges.length === 0) return;
       closePopover();
-      navAt.current = (navAt.current + step + badges.length) % badges.length;
-      const badge = badges[navAt.current]!;
+      const at = badges.findIndex((b) => b.title === navKey.current);
+      const next =
+        at === -1
+          ? step > 0
+            ? 0
+            : badges.length - 1
+          : (at + step + badges.length) % badges.length;
+      const badge = badges[next]!;
+      navKey.current = badge.title;
       badge.scrollIntoView({ block: 'center' });
       setActiveBadge(badge);
     },
