@@ -109,6 +109,22 @@ describe('syncBadges', () => {
     ).toBe('BREAKING');
   });
 
+  it('gives same-titled notes on different lines distinct nav keys', () => {
+    // ‹ › nav tracks the cursor by badge identity; two lint-style findings
+    // sharing a kind and title must not collapse into one cursor position.
+    syncBadges(
+      [note(), note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const keys = [...document.querySelectorAll('[data-lowdiff-badge]')].map((b) =>
+      b.getAttribute('data-lowdiff-key'),
+    );
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[0]).not.toBe(keys[1]);
+  });
+
   it('clearBadges removes them all', () => {
     syncBadges([note(), note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })], classicDom, () => {});
     clearBadges();

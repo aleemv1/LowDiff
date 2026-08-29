@@ -179,7 +179,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
       const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
       if (badges.length === 0) return;
       closePopover();
-      const at = badges.findIndex((b) => b.title === navKey.current);
+      const at = badges.findIndex((b) => b.getAttribute('data-lowdiff-key') === navKey.current);
       const next =
         at === -1
           ? step > 0
@@ -187,7 +187,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
             : badges.length - 1
           : (at + step + badges.length) % badges.length;
       const badge = badges[next]!;
-      navKey.current = badge.title;
+      navKey.current = badge.getAttribute('data-lowdiff-key');
       badge.scrollIntoView({ block: 'center' });
       setActiveBadge(badge);
     },

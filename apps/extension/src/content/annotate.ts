@@ -298,6 +298,9 @@ function createBadge(note: Note): HTMLElement {
   const badge = document.createElement('span');
   badge.setAttribute(BADGE_ATTR, '');
   badge.setAttribute('data-lowdiff-kind', note.kind);
+  // Nav identity for the overlay's ‹ › cursor. The title alone is not unique:
+  // the same lint-style finding on two lines shares kind and title.
+  badge.setAttribute('data-lowdiff-key', noteKey(note));
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.title = `${note.kind}: ${note.title}`;
