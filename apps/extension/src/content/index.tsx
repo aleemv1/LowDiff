@@ -98,10 +98,21 @@ function mount(): boolean {
 
   console.info(TAG, 'mounted inside', anchor.tagName, anchor.id || anchor.className || '(anon)');
   render(<Overlay pr={location} overlayRoot={overlayContainer} />, container);
+  mounted = container;
   return true;
 }
 
+/** The rendered tree's container, kept so unmount can actually unmount it. */
+let mounted: Element | null = null;
+
 function unmount(): void {
+  // Removing the host does not unmount the tree: the old Overlay's effects —
+  // its watch timers included — keep running and repaint the previous PR's
+  // badges onto whatever diff renders next. Tear the tree down first.
+  if (mounted) {
+    render(null, mounted);
+    mounted = null;
+  }
   clearBadges();
   document.getElementById(HOST_ID)?.remove();
   document.getElementById(OVERLAY_HOST_ID)?.remove();

@@ -12,7 +12,7 @@ import type { Note } from '@lowdiff/core';
 import { classicDom } from '../src/content/dom/classic.js';
 import { modernDom } from '../src/content/dom/modern.js';
 import { detectDiffDom } from '../src/content/dom/index.js';
-import { clearBadges, syncBadges } from '../src/content/annotate.js';
+import { clearBadges, syncBadges, syncInlineNotes } from '../src/content/annotate.js';
 
 const FIXTURE = readFileSync(
   resolve(import.meta.dirname, 'fixtures/pr-files-classic.html'),
@@ -107,6 +107,22 @@ describe('syncBadges', () => {
     expect(
       document.querySelector('[data-lowdiff-badge]')!.getAttribute('data-lowdiff-kind'),
     ).toBe('BREAKING');
+  });
+
+  it('gives same-titled notes on different lines distinct nav keys', () => {
+    // ‹ › nav tracks the cursor by badge identity; two lint-style findings
+    // sharing a kind and title must not collapse into one cursor position.
+    syncBadges(
+      [note(), note({ anchor: { path: PATH, side: 'RIGHT', line: 5, lineHash: 'x' } })],
+      classicDom,
+      () => {},
+    );
+    const keys = [...document.querySelectorAll('[data-lowdiff-badge]')].map((b) =>
+      b.getAttribute('data-lowdiff-key'),
+    );
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[0]).not.toBe(keys[1]);
   });
 
   it('clearBadges removes them all', () => {
@@ -222,6 +238,88 @@ describe('modernDom', () => {
  * cell broke differently in each generation of GitHub's markup — a sibling
  * table cell in the classic view, a forced line break in the newer one.
  */
+describe('syncInlineNotes', () => {
+  const MODERN = readFileSync(
+    resolve(import.meta.dirname, 'fixtures/pr-changes-modern.html'),
+    'utf8',
+  );
+
+  beforeEach(() => {
+    document.documentElement.innerHTML = MODERN;
+    clearBadges();
+  });
+
+  it('shows SECURITY as a strip under its row by default', () => {
+    syncInlineNotes(
+      [note({ kind: 'SECURITY', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
+      modernDom,
+      () => {},
+    );
+    const strip = document.querySelector('[data-lowdiff-inline]')!;
+    expect(strip).not.toBeNull();
+    expect(strip.textContent).toContain('Wallet address planted in a workflow file');
+    expect(strip.previousElementSibling?.textContent).toContain('Python Package using Conda');
+  });
+
+  it('reads a file&apos;s lines once, not once per note', () => {
+    // dom.lines walks every rendered row for the path; per-note calls made
+    // a many-note file quadratic. syncBadges already indexes — match it.
+    let reads = 0;
+    const counting = {
+      ...modernDom,
+      lines: (path: string) => {
+        reads += 1;
+        return modernDom.lines(path);
+      },
+    };
+    syncInlineNotes(
+      [
+        note({ kind: 'SECURITY', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } }),
+        note({ kind: 'RISK', anchor: { path: PATH, side: 'RIGHT', line: 1, lineHash: 'x' } }),
+      ],
+      counting,
+      () => {},
+    );
+    expect(document.querySelectorAll('[data-lowdiff-inline]')).toHaveLength(2);
+    expect(reads).toBe(1);
+  });
+
+  it('keeps quieter kinds behind their star', () => {
+    syncInlineNotes(
+      [note({ kind: 'SUGGESTION', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
+      modernDom,
+      () => {},
+    );
+    expect(document.querySelector('[data-lowdiff-inline]')).toBeNull();
+  });
+
+  it('a dismissed strip stays dismissed across re-syncs', () => {
+    const target = [
+      note({
+        kind: 'SECURITY',
+        title: 'Dismiss me',
+        anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' },
+      }),
+    ];
+    syncInlineNotes(target, modernDom, () => {});
+    (document.querySelector('[data-lowdiff-inline] span:last-child') as HTMLElement).click();
+    expect(document.querySelector('[data-lowdiff-inline]')).toBeNull();
+    syncInlineNotes(target, modernDom, () => {});
+    expect(document.querySelector('[data-lowdiff-inline]')).toBeNull();
+  });
+
+  it('clicking the strip opens the note', () => {
+    const seen: string[] = [];
+    syncInlineNotes(
+      [note({ kind: 'SECURITY', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],
+      modernDom,
+      ({ note: n }) => seen.push(n.kind),
+    );
+    (document.querySelector('[data-lowdiff-inline] td') as HTMLElement).click();
+    expect(seen).toEqual(['SECURITY']);
+  });
+});
+
 describe('badge placement in the gutter', () => {
   it('classic: the gutter cell is the line-number cell', () => {
     document.documentElement.innerHTML = FIXTURE;

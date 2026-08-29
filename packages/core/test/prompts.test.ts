@@ -51,6 +51,10 @@ describe('systemPrompt', () => {
     expect(systemPrompt()).toMatch(/EXPLAIN note on every hunk/);
   });
 
+  it('keeps note bodies short enough for a floating box', () => {
+    expect(systemPrompt()).toMatch(/under 350 characters/);
+  });
+
   it('forbids citing unseen lines', () => {
     expect(systemPrompt()).toMatch(/Never cite a line you were not shown/);
   });

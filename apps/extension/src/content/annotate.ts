@@ -161,6 +161,85 @@ function insertAtLineEnd(cell: HTMLElement, badge: HTMLElement): void {
   anchor.parentNode.insertBefore(badge, anchor.nextSibling);
 }
 
+const INLINE_ATTR = 'data-lowdiff-inline';
+/** SECURITY and RISK earn a visible row; the rest wait behind their star. */
+const INLINE_KINDS = new Set(['SECURITY', 'RISK']);
+/** Session-scoped: a dismissed strip stays dismissed across re-syncs. */
+const dismissedInline = new Set<string>();
+
+/**
+ * Important notes show themselves: a slim tinted row under the cited line,
+ * exactly how GitHub renders its own inline comments — a sibling <tr>
+ * spanning the row's cells. Clicking it opens the full note; ✕ dismisses it
+ * for the session (the star remains).
+ */
+export function syncInlineNotes(
+  notes: readonly Note[],
+  dom: DiffDom,
+  onSelect: (target: BadgeTarget) => void,
+): void {
+  for (const el of document.querySelectorAll(`[${INLINE_ATTR}]`)) el.remove();
+
+  // dom.lines walks every rendered row for the path, so read each file once
+  // and index it, as syncBadges does — lazily, since most notes filter out.
+  const indexes = new Map<string, Map<string, ReturnType<DiffDom['lines']>[number]>>();
+  const indexFor = (path: string) => {
+    let index = indexes.get(path);
+    if (!index) {
+      index = new Map();
+      for (const line of dom.lines(path)) index.set(`${line.side}:${line.line}`, line);
+      indexes.set(path, index);
+    }
+    return index;
+  };
+
+  for (const note of notes) {
+    if (!INLINE_KINDS.has(note.kind) || dismissedInline.has(noteKey(note))) continue;
+    const line = indexFor(note.anchor.path).get(`${note.anchor.side}:${note.anchor.line}`);
+    const row = line?.row.closest('tr') ?? line?.row;
+    if (!(row instanceof HTMLTableRowElement)) continue;
+
+    const color = kindColor(note.kind);
+    const strip = document.createElement('tr');
+    strip.setAttribute(INLINE_ATTR, '');
+    const cell = document.createElement('td');
+    cell.colSpan = row.children.length;
+    Object.assign(cell.style, {
+      padding: '4px 10px 4px 62px',
+      background: `color-mix(in srgb, ${color} 7%, transparent)`,
+      borderLeft: `3px solid ${color}`,
+      cursor: 'pointer',
+      font: '12px/1.5 -apple-system, BlinkMacSystemFont, sans-serif',
+      color: 'var(--fgColor-default, #1f2328)',
+      whiteSpace: 'normal',
+    } satisfies Partial<CSSStyleDeclaration>);
+
+    const kind = document.createElement('span');
+    kind.textContent = note.kind;
+    Object.assign(kind.style, {
+      color, font: '700 9.5px -apple-system, sans-serif', letterSpacing: '.04em',
+      marginRight: '8px',
+    } satisfies Partial<CSSStyleDeclaration>);
+    const title = document.createElement('span');
+    title.textContent = note.title;
+    const dismiss = document.createElement('span');
+    dismiss.textContent = '✕';
+    Object.assign(dismiss.style, {
+      float: 'right', color: 'var(--fgColor-muted, #59636e)', padding: '0 4px',
+      cursor: 'pointer',
+    } satisfies Partial<CSSStyleDeclaration>);
+    dismiss.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dismissedInline.add(noteKey(note));
+      strip.remove();
+    });
+    cell.append(kind, title, dismiss);
+    cell.addEventListener('click', () => onSelect({ note, element: cell }));
+    strip.append(cell);
+    row.after(strip);
+  }
+}
+
 const HIGHLIGHT_ATTR = 'data-lowdiff-highlit';
 
 /**
@@ -204,6 +283,7 @@ export function highlightNote(note: Note | null, dom: DiffDom): DOMRect | null {
 
 export function clearBadges(): void {
   for (const badge of document.querySelectorAll(`[${BADGE_ATTR}]`)) badge.remove();
+  for (const strip of document.querySelectorAll(`[${INLINE_ATTR}]`)) strip.remove();
 }
 
 /** Highlight the badge whose note is currently open. */
@@ -229,6 +309,9 @@ function createBadge(note: Note): HTMLElement {
   const badge = document.createElement('span');
   badge.setAttribute(BADGE_ATTR, '');
   badge.setAttribute('data-lowdiff-kind', note.kind);
+  // Nav identity for the overlay's ‹ › cursor. The title alone is not unique:
+  // the same lint-style finding on two lines shares kind and title.
+  badge.setAttribute('data-lowdiff-key', noteKey(note));
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.title = `${note.kind}: ${note.title}`;

@@ -7,7 +7,7 @@ import { SummaryCard } from './components/SummaryCard.js';
 import { Sparkle } from './components/Sparkle.js';
 import { NotePopover } from './components/NotePopover.js';
 import { ChatPanel } from './components/ChatPanel.js';
-import { clearBadges, highlightNote, setActiveBadge, syncBadges } from './annotate.js';
+import { clearBadges, highlightNote, setActiveBadge, syncBadges, syncInlineNotes } from './annotate.js';
 import { detectDiffDom } from './dom/index.js';
 import { watch } from './watch.js';
 
@@ -107,6 +107,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [hiddenKinds, setHiddenKinds] = useState<NoteKind[]>([]);
   const [cached, setCached] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [idle, setIdle] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [placed, setPlaced] = useState(0);
 
@@ -166,6 +167,33 @@ export function Overlay({ pr, overlayRoot }: Props) {
     setOpen(null);
   }, []);
 
+  /**
+   * Walk the findings in document order, glowing each visited star. The
+   * cursor is the note's identity, not a slot index: the badge list is
+   * rebuilt whenever the diff renders more rows or the kind filter changes,
+   * so an index would silently point at a different finding afterwards.
+   */
+  const navKey = useRef<string | null>(null);
+  const nav = useCallback(
+    (step: number) => {
+      const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
+      if (badges.length === 0) return;
+      closePopover();
+      const at = badges.findIndex((b) => b.getAttribute('data-lowdiff-key') === navKey.current);
+      const next =
+        at === -1
+          ? step > 0
+            ? 0
+            : badges.length - 1
+          : (at + step + badges.length) % badges.length;
+      const badge = badges[next]!;
+      navKey.current = badge.getAttribute('data-lowdiff-key');
+      badge.scrollIntoView({ block: 'center' });
+      setActiveBadge(badge);
+    },
+    [closePopover],
+  );
+
   /** Keep badges on the rows GitHub has rendered so far. */
   useEffect(() => {
     if (visibleNotes.length === 0) {
@@ -187,11 +215,12 @@ export function Overlay({ pr, overlayRoot }: Props) {
       lastSignature = signature;
 
       setPlaced(syncBadges(visibleNotes, dom, ({ note, element }) => select(note, element)));
+      syncInlineNotes(visibleNotes, dom, ({ note, element }) => select(note, element));
     });
   }, [visibleNotes, hiddenKinds, select]);
 
   const run = useCallback(
-    async (refresh: boolean) => {
+    async (refresh: boolean, onlyCached = false) => {
       if (orphaned()) {
         setBusy(false);
         setError(REFRESH_HINT);
@@ -199,11 +228,15 @@ export function Overlay({ pr, overlayRoot }: Props) {
         return;
       }
       setBusy(true);
+      // Leave the ask the moment any scan starts — from its Analyze button
+      // or from ↻ — or it keeps rendering over the progress and the error,
+      // and its still-live button can start a second billed scan.
+      setIdle(false);
       setError(null);
       let reply: AnnotateReply;
       try {
         reply = (await orGetsOrphaned(
-          chrome.runtime.sendMessage({ type: 'ANNOTATE', pr, refresh }),
+          chrome.runtime.sendMessage({ type: 'ANNOTATE', pr, refresh, onlyCached }),
         )) as AnnotateReply;
       } catch (cause) {
         setBusy(false);
@@ -218,6 +251,14 @@ export function Overlay({ pr, overlayRoot }: Props) {
         setNotes([]);
         return;
       }
+      if ('idle' in reply) {
+        setIdle(true);
+        // Every other terminal path clears the notes; idle must too, or
+        // whatever an earlier run put on screen outlives its scan.
+        setNotes([]);
+        return;
+      }
+      setIdle(false);
       setSummary(reply.summary);
       setNotes(reply.notes);
       setCached(reply.cached);
@@ -267,7 +308,8 @@ export function Overlay({ pr, overlayRoot }: Props) {
         setError('LowDiff needs an API key before it can review this pull request.');
         return;
       }
-      await run(false);
+      // A cached review is free to show; a fresh scan asks first.
+      await run(false, true);
     })();
   }, [run]);
 
@@ -374,6 +416,9 @@ export function Overlay({ pr, overlayRoot }: Props) {
         cached={cached}
         busy={busy}
         onRefresh={() => void run(true)}
+        idle={idle}
+        onScan={() => void run(false)}
+        onNav={nav}
       />
 
       {notesHidden > 0 && !busy && (

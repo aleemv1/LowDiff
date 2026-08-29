@@ -10,6 +10,11 @@ interface Props {
   cached: boolean;
   busy: boolean;
   onRefresh: () => void;
+  /** Auto-scan is off and nothing is cached: wait for the button. */
+  idle: boolean;
+  onScan: () => void;
+  /** Step through the findings in document order: -1 previous, 1 next. */
+  onNav: (step: number) => void;
 }
 
 const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
@@ -72,7 +77,7 @@ export function SummaryCard(props: Props) {
               {n} {n === 1 ? LABEL[kind]!.one : LABEL[kind]!.many}
             </span>
           ))}
-          {props.notes.length === 0 && !props.busy && (
+          {props.notes.length === 0 && !props.busy && !props.idle && (
             <span class="pill" style={{ background: '#e9f8ec', color: '#1a7f37' }}>
               nothing flagged
             </span>
@@ -80,6 +85,26 @@ export function SummaryCard(props: Props) {
         </span>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {props.notes.length > 0 && (
+            <span style={{ display: 'flex', gap: '2px' }}>
+              <button
+                class="btn btn-ghost"
+                style={{ padding: '4px 9px' }}
+                onClick={() => props.onNav(-1)}
+                title="Previous finding"
+              >
+                ‹
+              </button>
+              <button
+                class="btn btn-ghost"
+                style={{ padding: '4px 9px' }}
+                onClick={() => props.onNav(1)}
+                title="Next finding"
+              >
+                ›
+              </button>
+            </span>
+          )}
           <button
             class="btn btn-ghost"
             style={{ padding: '4px 10px' }}
@@ -107,7 +132,21 @@ export function SummaryCard(props: Props) {
           }}
         >
           <div>
-            {props.busy && props.notes.length === 0 ? (
+            {props.idle ? (
+              <div class="ask">
+                <span class="spark" style={{ fontSize: '15px' }}>✦</span>
+                <span style={{ font: `13px 'DM Sans',sans-serif`, color: C.ink }}>
+                  I see a pull request. Should I analyze it?
+                </span>
+                <button
+                  class="btn btn-primary"
+                  onClick={props.onScan}
+                  style={{ font: `600 12px 'DM Sans',sans-serif` }}
+                >
+                  Analyze
+                </button>
+              </div>
+            ) : props.busy && props.notes.length === 0 ? (
               'Reading the diff…'
             ) : (
               <Markdown text={props.summary} font="13px/1.65 inherit" />

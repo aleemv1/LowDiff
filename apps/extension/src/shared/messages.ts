@@ -35,7 +35,7 @@ export interface PrLocation {
 
 export type Request =
   | { type: 'GET_PUBLIC_SETTINGS' }
-  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean }
+  | { type: 'ANNOTATE'; pr: PrLocation; refresh?: boolean; onlyCached?: boolean }
   | {
       type: 'CHAT';
       pr: PrLocation;
@@ -65,5 +65,5 @@ export interface Failure {
 }
 
 
-export type AnnotateReply = AnnotateOk | Failure;
+export type AnnotateReply = AnnotateOk | { ok: true; idle: true } | Failure;
 export type PublicSettingsReply = { ok: true; settings: PublicSettings } | Failure;
