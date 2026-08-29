@@ -261,6 +261,29 @@ describe('syncInlineNotes', () => {
     expect(strip.previousElementSibling?.textContent).toContain('Python Package using Conda');
   });
 
+  it('reads a file&apos;s lines once, not once per note', () => {
+    // dom.lines walks every rendered row for the path; per-note calls made
+    // a many-note file quadratic. syncBadges already indexes — match it.
+    let reads = 0;
+    const counting = {
+      ...modernDom,
+      lines: (path: string) => {
+        reads += 1;
+        return modernDom.lines(path);
+      },
+    };
+    syncInlineNotes(
+      [
+        note({ kind: 'SECURITY', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } }),
+        note({ kind: 'RISK', anchor: { path: PATH, side: 'RIGHT', line: 1, lineHash: 'x' } }),
+      ],
+      counting,
+      () => {},
+    );
+    expect(document.querySelectorAll('[data-lowdiff-inline]')).toHaveLength(2);
+    expect(reads).toBe(1);
+  });
+
   it('keeps quieter kinds behind their star', () => {
     syncInlineNotes(
       [note({ kind: 'SUGGESTION', anchor: { path: PATH, side: 'RIGHT', line: 2, lineHash: 'x' } })],

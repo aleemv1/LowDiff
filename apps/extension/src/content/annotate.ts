@@ -180,11 +180,22 @@ export function syncInlineNotes(
 ): void {
   for (const el of document.querySelectorAll(`[${INLINE_ATTR}]`)) el.remove();
 
+  // dom.lines walks every rendered row for the path, so read each file once
+  // and index it, as syncBadges does — lazily, since most notes filter out.
+  const indexes = new Map<string, Map<string, ReturnType<DiffDom['lines']>[number]>>();
+  const indexFor = (path: string) => {
+    let index = indexes.get(path);
+    if (!index) {
+      index = new Map();
+      for (const line of dom.lines(path)) index.set(`${line.side}:${line.line}`, line);
+      indexes.set(path, index);
+    }
+    return index;
+  };
+
   for (const note of notes) {
     if (!INLINE_KINDS.has(note.kind) || dismissedInline.has(noteKey(note))) continue;
-    const line = dom
-      .lines(note.anchor.path)
-      .find((l) => l.side === note.anchor.side && l.line === note.anchor.line);
+    const line = indexFor(note.anchor.path).get(`${note.anchor.side}:${note.anchor.line}`);
     const row = line?.row.closest('tr') ?? line?.row;
     if (!(row instanceof HTMLTableRowElement)) continue;
 
