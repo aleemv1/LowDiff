@@ -253,6 +253,9 @@ export function Overlay({ pr, overlayRoot }: Props) {
       }
       if ('idle' in reply) {
         setIdle(true);
+        // Every other terminal path clears the notes; idle must too, or
+        // whatever an earlier run put on screen outlives its scan.
+        setNotes([]);
         return;
       }
       setIdle(false);
