@@ -76,6 +76,7 @@ const memory = new Map<string, unknown>();
 
 (globalThis as unknown as { chrome: unknown }).chrome = {
   storage: {
+    onChanged: { addListener: () => {}, removeListener: () => {} },
     local: {
       get: async (key: string | null) =>
         key === null
@@ -90,11 +91,12 @@ const memory = new Map<string, unknown>();
     },
   },
   runtime: {
+    id: 'lowdiff-dev-harness',
     sendMessage: async (message: { type: string }) => {
       if (message.type === 'GET_PUBLIC_SETTINGS') {
         return {
           ok: true,
-          settings: { provider: 'anthropic', configured: true },
+          settings: { provider: 'anthropic', configured: true, hiddenKinds: [] },
         };
       }
       if (message.type === 'ANNOTATE') {
@@ -111,49 +113,38 @@ const memory = new Map<string, unknown>();
       }
       return { ok: true };
     },
-    connect: () => ({
-      onMessage: {
-        addListener: (fn: (d: unknown) => void) => {
-          // A realistic answer: prose, inline code, and two fenced alternatives.
-          const reply = [
-            'The `strategy` block contains only `max-parallel: 5` and no `matrix:` key,',
-            'so `build-linux` expands to exactly one job. Capping concurrency at 5 over',
-            'a set of size 1 is a no-op.',
-            '',
-            'Drop it:',
-            '```yaml',
-            '  build-linux:',
-            '    runs-on: ubuntu-latest',
-            '    steps:',
-            '      ...',
-            '```',
-            '',
-            'Or make it meaningful:',
-            '```yaml',
-            '    strategy:',
-            '      max-parallel: 5',
-            '      matrix:',
-            "        python-version: ['3.10', '3.11', '3.12']",
-            '```',
-            '',
-            'Note that a matrix also needs `${{ matrix.python-version }}` wired into the',
-            'setup step.',
-          ].join('\n');
-
-          const chunks = reply.match(/[\s\S]{1,24}/g) ?? [];
-          let i = 0;
-          const timer = setInterval(() => {
-            if (i >= chunks.length) {
-              clearInterval(timer);
-              fn({ type: 'done' });
-              return;
-            }
-            fn({ type: 'text', text: chunks[i++] });
-          }, 25);
+    connect: () => {
+      let timer: ReturnType<typeof setInterval> | undefined;
+      return {
+        onDisconnect: { addListener: () => {} },
+        onMessage: {
+          addListener: (fn: (d: unknown) => void) => {
+            const reply = [
+              'Debounce reduces how often a request starts. An earlier request can still finish last and overwrite newer results.',
+              '',
+              'Pass an `AbortSignal` to `fetchResults` and cancel during effect cleanup:',
+              '```typescript',
+              'const ctrl = new AbortController();',
+              'fetchResults(debounced, { signal: ctrl.signal });',
+              'return () => ctrl.abort();',
+              '```',
+              'Also check callers of `search()` before removing `cacheKey` from its public signature.',
+            ].join('\n');
+            const chunks = reply.match(/[\s\S]{1,24}/g) ?? [];
+            let i = 0;
+            timer = setInterval(() => {
+              if (i >= chunks.length) {
+                clearInterval(timer);
+                fn({ type: 'done' });
+                return;
+              }
+              fn({ type: 'text', text: chunks[i++] });
+            }, 25);
+          },
         },
-      },
-      disconnect: () => {},
-    }),
+        disconnect: () => clearInterval(timer),
+      };
+    },
   },
 };
 
@@ -168,3 +159,9 @@ render(
   <Overlay pr={{ owner: 'acme', repo: 'search-api', number: 412 }} overlayRoot={overlayRoot} />,
   document.getElementById('root')!,
 );
+
+// Preview-only controls. No live GitHub or model requests are made here.
+document.getElementById('theme-toggle')?.addEventListener('click', () => {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+});

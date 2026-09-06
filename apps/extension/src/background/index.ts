@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener((message: Request, _sender, sendResponse) =
 
 async function handle(
   message: Request,
-): Promise<AnnotateReply | PublicSettingsReply | ReposReply | { ok: true }> {
+): Promise<AnnotateReply | PublicSettingsReply | { ok: true }> {
   switch (message.type) {
     case 'GET_PUBLIC_SETTINGS': {
       const settings = await loadSettings();

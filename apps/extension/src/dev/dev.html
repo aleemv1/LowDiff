@@ -1,49 +1,60 @@
 <!doctype html>
-<html>
+<html data-theme="light">
   <head>
     <meta charset="utf-8" />
-    <title>LowDiff overlay harness</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&display=swap"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LowDiff · Inline review preview</title>
     <style>
-      body { margin: 0; background: #eef1f6; }
-      .page { max-width: 1100px; margin: 24px auto; background: #fff; border-radius: 14px; padding: 24px; }
+      :root { color-scheme: light; --bgColor-default: #fff; --bgColor-muted: #f6f8fa; --fgColor-default: #1f2328; --fgColor-muted: #59636e; --borderColor-default: #d1d9e0; }
+      :root[data-theme=dark] { color-scheme: dark; --bgColor-default: #0d1117; --bgColor-muted: #161b22; --fgColor-default: #e6edf3; --fgColor-muted: #9198a1; --borderColor-default: #30363d; --bgColor-danger-muted: #2d1519; --fgColor-danger: #ff7b72; --bgColor-attention-muted: #2e2514; --fgColor-attention: #d29922; --diffBlob-additionNum-bgColor: #143d24; --color-prettylights-syntax-keyword: #ff7b72; --color-prettylights-syntax-entity: #d2a8ff; --color-prettylights-syntax-constant: #79c0ff; }
+      body { margin: 0; background: var(--bgColor-default); color: var(--fgColor-default); font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      header { background: var(--bgColor-muted); border-bottom: 1px solid var(--borderColor-default); padding: 16px 24px; display: flex; gap: 14px; align-items: center; }
+      header strong { font-size: 16px; } header span { color: var(--fgColor-muted); }
+      button { color: inherit; cursor: pointer; } #theme-toggle { margin-left: auto; background: var(--bgColor-default); border: 1px solid var(--borderColor-default); border-radius: 6px; padding: 6px 10px; }
+      .pr { padding: 20px 24px 0; } h1 { font-size: 23px; font-weight: 600; margin: 0 0 10px; } h1 span { color: var(--fgColor-muted); font-weight: 400; }
+      nav { display: flex; gap: 28px; border-bottom: 1px solid var(--borderColor-default); margin-bottom: 16px; } nav span { padding: 12px 0; } nav strong { padding: 12px 0; border-bottom: 2px solid #7c7cf0; }
+      .workspace { display: grid; grid-template-columns: 190px minmax(0,1fr); gap: 20px; padding: 0 24px 30px; }
+      aside { color: var(--fgColor-muted); padding-top: 12px; } aside div { padding: 7px 10px; border-radius: 6px; } aside .selected { background: var(--bgColor-muted); color: var(--fgColor-default); }
+      .page { min-width: 0; } .file { border: 1px solid var(--borderColor-default); border-radius: 7px; overflow: hidden; margin-bottom: 16px; }
+      .file-title { background: var(--bgColor-muted); padding: 10px 14px; font-weight: 600; border-bottom: 1px solid var(--borderColor-default); }
+      table { width: 100%; border-collapse: collapse; table-layout: fixed; } td { font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace; vertical-align: top; }
+      td[data-first-unified-line-number-cell] { width: 40px; text-align: right; padding: 0 10px 0 0; color: var(--fgColor-muted); }
+      td[data-line-anchor] { padding: 0 28px 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      tr.add { background: color-mix(in srgb, #2da44e 12%, transparent); } tr.del { background: color-mix(in srgb, #d1242f 12%, transparent); }
+      @media(max-width: 850px) { .workspace { grid-template-columns: minmax(0,1fr); padding: 0 12px; } aside { display:none; } header, .pr { padding-left: 12px; padding-right: 12px; } }
     </style>
   </head>
   <body>
-    <div class="page">
-      <div id="root"></div>
-
-      <!--
-        A stand-in for GitHub's client-rendered diff, using the same semantic
-        attributes the modern adapter reads. Without it the harness has nothing
-        to attach badges to, and the whole placement path goes untested.
-      -->
-      <div id="diff-comparison-viewer-container">
-        <table role="grid" aria-label="Diff for: src/search/useSearch.ts" data-diff-anchor="diff-a">
-          <tbody>
-            <tr>
-              <td data-diff-side="right" data-line-number="25" data-first-unified-line-number-cell="false">25</td>
-              <td data-diff-side="right" data-line-number="25" data-line-anchor="diff-aR25">+  const debounced = useDebounce(query, 300);</td>
-            </tr>
-            <tr>
-              <td data-diff-side="right" data-line-number="26" data-first-unified-line-number-cell="false">26</td>
-              <td data-diff-side="right" data-line-number="26" data-line-anchor="diff-aR26">+  const results = fetchResults(debounced);</td>
-            </tr>
-          </tbody>
-        </table>
-        <table role="grid" aria-label="Diff for: src/api/client.ts" data-diff-anchor="diff-b">
-          <tbody>
-            <tr>
-              <td data-diff-side="right" data-line-number="59" data-first-unified-line-number-cell="false">59</td>
-              <td data-diff-side="right" data-line-number="59" data-line-anchor="diff-bR59">+  term: string,</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <header><strong>◈</strong> acme / <b>search-api</b><span>Local preview · fixture data</span><button id="theme-toggle">Toggle theme</button></header>
+    <div class="pr"><h1>Debounce search requests <span>#412</span></h1><nav><span>Conversation</span><span>Commits</span><span>Checks</span><strong>Files changed 2</strong></nav></div>
+    <div class="workspace">
+      <aside><div>▾ src</div><div class="selected">search/useSearch.ts</div><div>api/client.ts</div></aside>
+      <main class="page">
+        <div id="root"></div>
+        <div id="diff-comparison-viewer-container">
+          <section class="file"><div class="file-title">src/search/useSearch.ts</div>
+            <table role="grid" aria-label="Diff for: src/search/useSearch.ts" data-diff-anchor="diff-a"><colgroup><col style="width:40px"><col></colgroup><tbody>
+              <tr><td data-diff-side="right" data-line-number="24" data-first-unified-line-number-cell="false">24</td><td data-diff-side="right" data-line-number="24" data-line-anchor="diff-aR24">export function useSearch(query: string) {</td></tr>
+              <tr class="add"><td data-diff-side="right" data-line-number="25" data-first-unified-line-number-cell="false">25</td><td data-diff-side="right" data-line-number="25" data-line-anchor="diff-aR25">+  const debounced = useDebounce(query, 300);</td></tr>
+              <tr class="add"><td data-diff-side="right" data-line-number="26" data-first-unified-line-number-cell="false">26</td><td data-diff-side="right" data-line-number="26" data-line-anchor="diff-aR26">+  const results = fetchResults(debounced);</td></tr>
+              <tr><td data-diff-side="right" data-line-number="27" data-first-unified-line-number-cell="false">27</td><td data-diff-side="right" data-line-number="27" data-line-anchor="diff-aR27">   return useMemo(() =&gt; ({</td></tr>
+              <tr class="add"><td data-diff-side="right" data-line-number="28" data-first-unified-line-number-cell="false">28</td><td data-diff-side="right" data-line-number="28" data-line-anchor="diff-aR28">+    results: results ?? [],</td></tr>
+              <tr><td data-diff-side="right" data-line-number="29" data-first-unified-line-number-cell="false">29</td><td data-diff-side="right" data-line-number="29" data-line-anchor="diff-aR29">   }), [results]);</td></tr>
+              <tr><td data-diff-side="right" data-line-number="30" data-first-unified-line-number-cell="false">30</td><td data-diff-side="right" data-line-number="30" data-line-anchor="diff-aR30">}</td></tr>
+            </tbody></table>
+          </section>
+          <section class="file"><div class="file-title">src/api/client.ts</div>
+            <table role="grid" aria-label="Diff for: src/api/client.ts" data-diff-anchor="diff-b"><colgroup><col style="width:40px"><col></colgroup><tbody>
+              <tr><td data-diff-side="right" data-line-number="58" data-first-unified-line-number-cell="false">58</td><td data-diff-side="right" data-line-number="58" data-line-anchor="diff-bR58">export async function search(</td></tr>
+              <tr class="del"><td data-diff-side="left" data-line-number="59" data-first-unified-line-number-cell="true">59</td><td data-diff-side="left" data-line-number="59" data-line-anchor="diff-bL59">-  term: string, cacheKey?: string,</td></tr>
+              <tr class="add"><td data-diff-side="right" data-line-number="59" data-first-unified-line-number-cell="false">59</td><td data-diff-side="right" data-line-number="59" data-line-anchor="diff-bR59">+  term: string,</td></tr>
+              <tr><td data-diff-side="right" data-line-number="60" data-first-unified-line-number-cell="false">60</td><td data-diff-side="right" data-line-number="60" data-line-anchor="diff-bR60">): Promise&lt;SearchResult[]&gt; {</td></tr>
+              <tr><td data-diff-side="right" data-line-number="61" data-first-unified-line-number-cell="false">61</td><td data-diff-side="right" data-line-number="61" data-line-anchor="diff-bR61">   return fetchResults(term);</td></tr>
+              <tr><td data-diff-side="right" data-line-number="62" data-first-unified-line-number-cell="false">62</td><td data-diff-side="right" data-line-number="62" data-line-anchor="diff-bR62">}</td></tr>
+            </tbody></table>
+          </section>
+        </div>
+      </main>
     </div>
     <script type="module" src="./dev.js"></script>
   </body>

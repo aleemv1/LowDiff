@@ -11,6 +11,8 @@ interface Props {
   activity: string | null;
   /** Cost line for the last answer, or null before the first. */
   usage: string | null;
+  error?: string | null;
+  subtitle?: string;
   input: string;
   contextChips: string[];
   onInput: (value: string) => void;
@@ -59,7 +61,7 @@ export function ChatPanel(props: Props) {
         inputRef.current?.focus();
       }}
       style={{
-        position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 2147483000, width: '400px',
+        position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 2147483000, width: 'min(400px, 100vw)',
         display: 'flex', flexDirection: 'column', background: C.surface,
         boxShadow: '-8px 0 32px rgba(20,30,60,.14)', animation: 'chatUp .18s ease-out',
         borderLeft: `1px solid ${C.line}`,
@@ -70,10 +72,12 @@ export function ChatPanel(props: Props) {
         <span style={{ width: '20px', height: '20px', borderRadius: '6px', background: C.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
           <Sparkle size={11} />
         </span>
-        <span style={{ font: `700 12px 'DM Sans',sans-serif`, color: C.ink }}>Chat</span>
-        <span onClick={props.onClose} style={{ marginLeft: 'auto', cursor: 'pointer', color: C.faint, fontSize: '12px', padding: '2px 6px' }}>
-          ✕
+        <span style={{ font: `700 12px 'DM Sans',sans-serif`, color: C.ink }}>Chat
+          {props.subtitle && <span style={{ display: 'block', fontSize: '11px', fontWeight: 400, color: C.muted }}>{props.subtitle}</span>}
         </span>
+        <button type="button" aria-label="Close chat" onClick={props.onClose} class="btn btn-ghost" style={{ marginLeft: 'auto' }}>
+          ✕
+        </button>
       </div>
 
       <div
@@ -81,6 +85,9 @@ export function ChatPanel(props: Props) {
         class="scroll"
         style={{ flex: 1, padding: '16px 16px 8px', display: 'flex', flexDirection: 'column', gap: '14px' }}
       >
+        {props.messages.length === 0 && <div style={{ color: C.muted, fontSize: '13px', lineHeight: 1.6 }}>
+          Ask about this pull request, or continue a discussion from a finding in the diff.
+        </div>}
         {props.messages.map((msg, i) => (
           <div
             key={i}
@@ -105,6 +112,7 @@ export function ChatPanel(props: Props) {
             ✦ {props.activity ?? 'thinking…'}
           </div>
         )}
+        {props.error && <div role="alert" style={{ color: 'var(--ld-danger-fg)', fontSize: '12px' }}>{props.error}</div>}
         {props.usage && !props.typing && (
           <div style={{ font: `10.5px 'DM Sans',sans-serif`, color: C.faint }}>{props.usage}</div>
         )}
@@ -126,6 +134,7 @@ export function ChatPanel(props: Props) {
 
           <textarea
             ref={inputRef}
+            aria-label="Ask anything about this PR"
             rows={1}
             value={props.input}
             placeholder="Ask anything about this PR…"
@@ -137,9 +146,9 @@ export function ChatPanel(props: Props) {
               props.onInput(el.value);
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                 e.preventDefault();
-                props.onSend();
+                if (!props.typing) props.onSend();
               }
             }}
             style={{
@@ -154,16 +163,19 @@ export function ChatPanel(props: Props) {
             <span style={{ marginLeft: 'auto', color: C.faint, font: `500 10.5px 'DM Sans',sans-serif` }}>
               ↵ to send
             </span>
-            <span
+            <button
+              type="button"
+              aria-label="Send message"
+              disabled={props.typing || !props.input.trim()}
               onClick={props.onSend}
               style={{
                 width: '26px', height: '26px', borderRadius: '7px', background: C.accent,
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', cursor: 'pointer',
+                fontSize: '13px', cursor: 'pointer', border: 'none',
               }}
             >
               ↑
-            </span>
+            </button>
           </div>
         </div>
       </div>
