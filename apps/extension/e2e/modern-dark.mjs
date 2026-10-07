@@ -283,10 +283,8 @@ const strips = await page.evaluate(async () => {
 // ‹ › walk the findings in document order.
 const navProbe = await page.evaluate(async () => {
   const settle = () => new Promise((r) => setTimeout(r, 250));
-  const host = document.getElementById('lowdiff-root');
-  const next = [...(host?.shadowRoot?.querySelectorAll('button') ?? [])].find(
-    (b) => b.title === 'Next finding',
-  );
+  const host = document.getElementById('lowdiff-overlay-root');
+  const next = host?.shadowRoot?.querySelector('[aria-label="Next annotation"]');
   const activeLine = () =>
     [...document.querySelectorAll('[data-lowdiff-badge]')]
       .find((b) => {

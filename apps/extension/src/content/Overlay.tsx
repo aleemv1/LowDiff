@@ -1,13 +1,18 @@
+import { Fragment } from 'preact';
 import { createPortal } from 'preact/compat';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
+import { AnnotationDock } from './components/AnnotationDock.js';
 import { Sparkle } from './components/Sparkle.js';
-import { NotePopover } from './components/NotePopover.js';
+import { InlineNote } from './components/InlineNote.js';
+import { InlineNotes } from './inline-notes.js';
+import type { InlineSlot } from './inline-notes.js';
+import { useConversation } from './useConversation.js';
 import { ChatPanel } from './components/ChatPanel.js';
-import { clearBadges, highlightNote, setActiveBadge, syncBadges, syncInlineNotes } from './annotate.js';
+import { clearBadges, highlightNote, setActiveBadge, syncBadges, noteKey } from './annotate.js';
 import { detectDiffDom } from './dom/index.js';
 import { watch } from './watch.js';
 
@@ -16,18 +21,6 @@ interface Props {
   /** Container in the document.body-level shadow host for floating UI. */
   overlayRoot: Element;
 }
-
-interface Open {
-  note: Note;
-  top: number;
-  left: number;
-  /** Which side of the highlighted lines the popover sits on. */
-  side: 'below' | 'above';
-  /** The highlighted range's top, for snapping an above-popover to it. */
-  anchorTop: number;
-}
-
-const POPOVER_WIDTH = 440;
 
 /**
  * A reloaded extension (every dev rebuild) orphans this script and only a page
@@ -95,7 +88,7 @@ function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
- * Owns the summary card, the note popover, and the chat panel.
+ * Owns the summary card, line-anchored discussions, and the chat panel.
  *
  * The per-line badges are not rendered here — they are injected into GitHub's
  * own diff rows by `syncBadges`, so the annotations sit on the real diff the
@@ -109,15 +102,18 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [busy, setBusy] = useState(true);
   const [idle, setIdle] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placed, setPlaced] = useState(0);
+  const [placedKeys, setPlacedKeys] = useState<string[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
-  const [open, setOpen] = useState<Open | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatTurn[]>([]);
-  const [typing, setTyping] = useState(false);
+  const wasChatOpen = useRef(false);
   const [input, setInput] = useState('');
-  const [activity, setActivity] = useState<string | null>(null);
-  const [usage, setUsage] = useState<string | null>(null);
+  const [chatSource, setChatSource] = useState<string | null>(null);
+  const chat = useConversation(pr);
+  const inlineNotes = useMemo(() => new InlineNotes(), []);
+  const [slots, setSlots] = useState<InlineSlot[]>([]);
+  const [openRequests, setOpenRequests] = useState<Record<string, number>>({});
+  const navKey = useRef<string | null>(null);
 
   // One scan carries every kind; the popup's kind filter is the one lens
   // over it, so changing it is instant and free.
@@ -125,47 +121,59 @@ export function Overlay({ pr, overlayRoot }: Props) {
     () => notes.filter((note) => !hiddenKinds.includes(note.kind)),
     [notes, hiddenKinds],
   );
-
-  const notesRef = useRef<Note[]>([]);
-  notesRef.current = notes;
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const orderedNotes = useMemo(() => {
+    const order = new Map(placedKeys.map((key, index) => [key, index]));
+    return [...visibleNotes].sort((a, b) =>
+      (order.get(noteKey(a)) ?? placedKeys.length) - (order.get(noteKey(b)) ?? placedKeys.length));
+  }, [visibleNotes, placedKeys]);
 
   const select = useCallback((note: Note, element: HTMLElement) => {
-    const rect = element.getBoundingClientRect();
-
+    const key = noteKey(note);
+    navKey.current = key;
+    setActiveKey(key);
     setActiveBadge(element);
     const dom = detectDiffDom();
-    const lit = dom ? highlightNote(note, dom) : null;
-
-    // Anchor to the highlighted range rather than the badge. Opening against
-    // the badge put the popover on top of the very lines it had just
-    // highlighted, which defeats the point of highlighting them.
-    const anchorRect = lit ?? rect;
-
-    // Viewport (position:fixed) coordinates. Below the lines when there is
-    // room, otherwise ABOVE them — clamping a below-popover upward slid it
-    // over the very lines it had highlighted. The height here is an
-    // estimate; the layout effect below snaps to the real one.
-    const EST_HEIGHT = 340;
-    const side: 'below' | 'above' =
-      anchorRect.bottom + 8 + EST_HEIGHT <= window.innerHeight - 12 ? 'below' : 'above';
-    const top =
-      side === 'below'
-        ? anchorRect.bottom + 8
-        : Math.max(12, anchorRect.top - EST_HEIGHT - 8);
-    const left = Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12));
-    console.info('[LowDiff] popover open', { top, left, side, lit: Boolean(lit) });
-    setOpen({ note, top, left, side, anchorTop: anchorRect.top });
+    if (dom) highlightNote(note, dom);
+    setOpenRequests(previous => ({ ...previous, [key]: (previous[key] ?? 0) + 1 }));
   }, []);
 
-  const closePopover = useCallback(() => {
-    setActiveBadge(null);
+  useEffect(() => () => {
+    inlineNotes.clear();
+    clearBadges();
     const dom = detectDiffDom();
     if (dom) highlightNote(null, dom);
-    setOpen(null);
+  }, [inlineNotes]);
+
+  // Reserve space on desktop so chat never sits on top of the diff. On a
+  // narrow viewport it becomes a dismissible sheet instead of squeezing code.
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `@media (min-width: 1000px) {
+      body[data-lowdiff-chat-layout] {
+        box-sizing: border-box !important;
+        transition: padding-right 280ms cubic-bezier(.22,.61,.36,1) !important;
+      }
+      body[data-lowdiff-chat-open] { padding-right: 400px !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body[data-lowdiff-chat-layout] { transition: none !important; }
+    }`;
+    document.head.append(style);
+    document.body.setAttribute('data-lowdiff-chat-layout', '');
+    return () => {
+      style.remove();
+      document.body.removeAttribute('data-lowdiff-chat-layout');
+      document.body.removeAttribute('data-lowdiff-chat-open');
+    };
   }, []);
+
+  useLayoutEffect(() => {
+    document.body.toggleAttribute('data-lowdiff-chat-open', chatOpen);
+    if (!chatOpen && wasChatOpen.current) {
+      overlayRoot.querySelector<HTMLButtonElement>('button[aria-label="Open LowDiff chat"]')?.focus({ preventScroll: true });
+    }
+    wasChatOpen.current = chatOpen;
+  }, [chatOpen, overlayRoot]);
 
   /**
    * Walk the findings in document order, glowing each visited star. The
@@ -173,12 +181,10 @@ export function Overlay({ pr, overlayRoot }: Props) {
    * rebuilt whenever the diff renders more rows or the kind filter changes,
    * so an index would silently point at a different finding afterwards.
    */
-  const navKey = useRef<string | null>(null);
   const nav = useCallback(
     (step: number) => {
       const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
       if (badges.length === 0) return;
-      closePopover();
       const at = badges.findIndex((b) => b.getAttribute('data-lowdiff-key') === navKey.current);
       const next =
         at === -1
@@ -187,37 +193,61 @@ export function Overlay({ pr, overlayRoot }: Props) {
             : badges.length - 1
           : (at + step + badges.length) % badges.length;
       const badge = badges[next]!;
-      navKey.current = badge.getAttribute('data-lowdiff-key');
       badge.scrollIntoView({ block: 'center' });
-      setActiveBadge(badge);
+      badge.click();
     },
-    [closePopover],
+    [],
   );
 
-  /** Keep badges on the rows GitHub has rendered so far. */
+  const jumpTo = useCallback((note: Note) => {
+    const key = noteKey(note);
+    const badge = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')]
+      .find(element => element.getAttribute('data-lowdiff-key') === key);
+    if (!badge) return;
+    badge.scrollIntoView({ block: 'center' });
+    badge.focus({ preventScroll: true });
+    badge.click();
+  }, []);
+
+  /** Reconcile against DOM identity: GitHub may replace rows without changing their count. */
   useEffect(() => {
-    if (visibleNotes.length === 0) {
+    if (notes.length === 0) {
       clearBadges();
-      setPlaced(0);
+      inlineNotes.clear();
+      setSlots([]);
+      setPlacedKeys([]);
+      navKey.current = null;
+      setActiveKey(null);
+      const dom = detectDiffDom();
+      if (dom) highlightNote(null, dom);
       return;
     }
-
-    let lastSignature = '';
-
+    let previousCells: HTMLElement[] = [];
+    let expectedBadges = -1;
     return watch(() => {
       const dom = detectDiffDom();
-      if (!dom) return;
-
-      // Redo the pass only when the rendered diff actually changed. GitHub
-      // renders large diffs progressively, so rows keep arriving.
-      const signature = `${dom.name}:${document.querySelectorAll('[data-line-number]').length}:${hiddenKinds.join(',')}`;
-      if (signature === lastSignature) return;
-      lastSignature = signature;
-
-      setPlaced(syncBadges(visibleNotes, dom, ({ note, element }) => select(note, element)));
-      syncInlineNotes(visibleNotes, dom, ({ note, element }) => select(note, element));
+      if (!dom) {
+        previousCells = [];
+        expectedBadges = -1;
+        setPlacedKeys(previous => previous.length ? [] : previous);
+        return;
+      }
+      const cells = dom.paths().flatMap(path => dom.lines(path).map(line => line.codeCell));
+      const changed = cells.length !== previousCells.length || cells.some((cell, index) => cell !== previousCells[index]) ||
+        document.querySelectorAll('[data-lowdiff-badge]').length !== expectedBadges;
+      if (changed) {
+        previousCells = cells;
+        expectedBadges = syncBadges(visibleNotes, dom, ({ note, element }) => select(note, element));
+        const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
+        setPlacedKeys(badges.map(badge => badge.getAttribute('data-lowdiff-key')!));
+        const active = badges.find(badge => badge.getAttribute('data-lowdiff-key') === navKey.current);
+        setActiveBadge(active ?? null);
+        highlightNote(active ? visibleNotes.find(note => noteKey(note) === navKey.current) ?? null : null, dom);
+      }
+      const next = inlineNotes.sync(notes, dom, hiddenKinds);
+      if (changed) setSlots(next);
     });
-  }, [visibleNotes, hiddenKinds, select]);
+  }, [notes, visibleNotes, hiddenKinds, select, inlineNotes]);
 
   const run = useCallback(
     async (refresh: boolean, onlyCached = false) => {
@@ -313,103 +343,19 @@ export function Overlay({ pr, overlayRoot }: Props) {
     })();
   }, [run]);
 
-  const send = (question: string) => {
-    if (!question.trim()) return;
-    setMessages((prev) => [...prev, { role: 'user', content: question }]);
-    setInput('');
-    setTyping(true);
-
-    const portName = `lowdiff-chat:${Date.now()}`;
-    const port = chrome.runtime.connect({ name: portName });
-    let answer = '';
-    let started = false;
-
-    port.onMessage.addListener((delta: { type: string; text?: string; error?: string; label?: string; inputTokens?: number; outputTokens?: number; rounds?: number }) => {
-      if (delta.type === 'text' && delta.text) {
-        answer += delta.text;
-        setTyping(false);
-        setMessages((prev) => {
-          const next = [...prev];
-          if (started) next[next.length - 1] = { role: 'assistant', content: answer };
-          else next.push({ role: 'assistant', content: answer });
-          started = true;
-          return next;
-        });
-      } else if (delta.type === 'tool' && delta.label) {
-        setTyping(true);
-        setActivity(delta.label);
-      } else if (delta.type === 'usage') {
-        const tokens = `${((delta.inputTokens ?? 0) / 1000).toFixed(1)}k in / ${delta.outputTokens ?? 0} out`;
-        // Anthropic list price; close enough for a visibility line.
-        const dollars = ((delta.inputTokens ?? 0) * 5 + (delta.outputTokens ?? 0) * 25) / 1e6;
-        setUsage(
-          `${delta.rounds ? `${delta.rounds} search${delta.rounds === 1 ? '' : 'es'} · ` : ''}${tokens} ≈ $${dollars.toFixed(3)}`,
-        );
-        setActivity(null);
-      } else if (delta.type === 'error') {
-        setTyping(false);
-        setMessages((prev) => [...prev, { role: 'assistant', content: `⚠ ${delta.error}` }]);
-        port.disconnect();
-      } else if (delta.type === 'done') {
-        setTyping(false);
-        port.disconnect();
-      }
-    });
-
-    void chrome.runtime.sendMessage({
-      type: 'CHAT',
-      pr,
-      question,
-      history: messages,
-      port: portName,
-    });
+  const send = () => { if (chat.conversation.send(input)) setInput(''); };
+  const continueInChat = (note: Note, history: ChatTurn[]) => {
+    if (chat.busy) return;
+    chat.conversation.continueThread(noteKey(note), history);
+    setChatSource(`${note.anchor.path}:${note.anchor.line}`);
+    setChatOpen(true);
   };
 
-  /**
-   * The pre-render position uses an estimated height. Once the popover has a
-   * real one, correct before paint: an above-popover snaps its bottom to the
-   * highlighted lines; a below-popover only shifts up as far as the viewport
-   * demands.
-   */
-  useLayoutEffect(() => {
-    const el = popoverRef.current;
-    if (!el || !open) return;
-    const rect = el.getBoundingClientRect();
-    const top =
-      open.side === 'above'
-        ? Math.max(12, open.anchorTop - rect.height - 8)
-        : Math.min(open.top, window.innerHeight - 12 - rect.height);
-    if (Math.abs(top - open.top) > 1) {
-      setOpen((current) => (current ? { ...current, top: Math.max(12, top) } : current));
-    }
-    // Keyed on the note: open.top updates from this effect must not loop.
-  }, [open?.note]);
-
-  /**
-   * Fixed positioning detaches from the page on scroll, so close rather than
-   * drift — but not on the micro-scrolls the browser itself causes around the
-   * opening click (focus adjustments, GitHub's own nudges). A real scroll has
-   * distance and happens after the click settles.
-   */
-  useEffect(() => {
-    if (!open) return;
-    const openedAt = performance.now();
-    const startY = window.scrollY;
-    const onScroll = () => {
-      if (performance.now() - openedAt < 300) return;
-      if (Math.abs(window.scrollY - startY) < 48) return;
-      closePopover();
-    };
-    // Capture phase: GitHub scrolls nested containers, and scroll does not bubble.
-    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
-    return () => window.removeEventListener('scroll', onScroll, { capture: true });
-  }, [open, closePopover]);
-
-  const notesLost = visibleNotes.length - placed;
+  const notesLost = visibleNotes.length - placedKeys.length;
   const notesHidden = notes.length - visibleNotes.length;
 
   return (
-    <div class="root" ref={rootRef}>
+    <div class="root">
       <SummaryCard
         summary={error ?? summary}
         notes={visibleNotes}
@@ -418,7 +364,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         onRefresh={() => void run(true)}
         idle={idle}
         onScan={() => void run(false)}
-        onNav={nav}
       />
 
       {notesHidden > 0 && !busy && (
@@ -446,6 +391,13 @@ export function Overlay({ pr, overlayRoot }: Props) {
         </div>
       )}
 
+      {slots.map(slot => <Fragment key={slot.key}>{createPortal(
+        <InlineNote key={slot.key} note={slot.note} pr={pr}
+          openRequest={openRequests[slot.key] ?? 0} chatBusy={chat.busy}
+          onContinue={continueInChat} />,
+        slot.container,
+      )}</Fragment>)}
+
       {createPortal(
         /*
          * Keys typed in the floating UI must die here. They bubble out of the
@@ -460,56 +412,39 @@ export function Overlay({ pr, overlayRoot }: Props) {
           onKeyUp={(e) => e.stopPropagation()}
           onKeyPress={(e) => e.stopPropagation()}
         >
-      {open && (
-        <div
-          ref={popoverRef}
-          style={{
-            position: 'fixed', top: `${open.top}px`, left: `${open.left}px`,
-            width: `${POPOVER_WIDTH}px`, zIndex: 2147483000,
-            // Long notes exceed any height estimate: cap and scroll rather
-            // than run off the bottom of the screen.
-            maxHeight: '78vh', overflowY: 'auto', borderRadius: '12px',
-          }}
-        >
-          <NotePopover
-            note={open.note}
-            floating
-            onClose={closePopover}
-            onAsk={(note) => {
-              closePopover();
-              setChatOpen(true);
-              send(`About "${note.title}" at ${note.anchor.path}:${note.anchor.line} — tell me more.`);
-            }}
-          />
-        </div>
-      )}
-
-      {chatOpen ? (
-        <ChatPanel
-          messages={messages}
-          typing={typing}
-          activity={activity}
-          usage={usage}
+      <AnnotationDock notes={orderedNotes} placedKeys={placedKeys} activeKey={activeKey}
+        busy={busy} chatOpen={chatOpen} onToggleChat={() => setChatOpen(open => !open)} onNav={nav} onSelect={jumpTo} />
+      <ChatPanel
+          open={chatOpen}
+          messages={chat.messages}
+          typing={chat.busy}
+          activity={chat.activity}
+          usage={chat.usage}
+          error={chat.error}
           input={input}
-          contextChips={[`PR #${pr.number}`, 'diff', `${notes.length} findings`]}
+          contextChips={[`PR #${pr.number}`, ...(chatSource ? [chatSource] : ['diff', `${notes.length} findings`])]}
+          subtitle={`${pr.repo} · PR #${pr.number}`}
           onInput={setInput}
-          onSend={() => send(input)}
+          onSend={send}
           onClose={() => setChatOpen(false)}
-        />
-      ) : (
-        <div
+      />
+      {!chatOpen && visibleNotes.length === 0 && !busy && (
+        <button
+          class="chat-launcher"
+          type="button"
           onClick={() => setChatOpen(true)}
-          title="Ask AI"
+          title="Ask LowDiff"
+          aria-label="Open LowDiff chat"
           style={{
             position: 'fixed', right: '36px', bottom: '36px', zIndex: 2147483000,
             width: '54px', height: '54px', borderRadius: '50%',
-            background: 'linear-gradient(120deg,#5b5bd6,#7c5bd6)', color: '#fff',
+            background: C.accent, color: '#fff', border: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '22px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(91,91,214,.4)',
           }}
         >
           <Sparkle size={22} />
-        </div>
+        </button>
       )}
         </div>,
         overlayRoot,

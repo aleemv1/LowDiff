@@ -81,10 +81,10 @@ function mount(): boolean {
   const container = document.createElement('div');
   shadow.append(container);
 
-  // Floating UI (popover, chat, button) lives in its own host on
+  // Floating UI (chat, button) lives in its own host on
   // document.body. Inside GitHub's diff column, one transformed or
   // `contain`-ing ancestor silently re-bases position:fixed onto itself —
-  // the popover positioned against the wrong box and landed off-screen.
+  // the panel would be positioned against the wrong box.
   // body has no such ancestors.
   const overlayHost = document.createElement('div');
   overlayHost.id = OVERLAY_HOST_ID;

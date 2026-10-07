@@ -13,8 +13,6 @@ interface Props {
   /** Auto-scan is off and nothing is cached: wait for the button. */
   idle: boolean;
   onScan: () => void;
-  /** Step through the findings in document order: -1 previous, 1 next. */
-  onNav: (step: number) => void;
 }
 
 const LABEL: Partial<Record<NoteKind, { one: string; many: string }>> = {
@@ -85,26 +83,6 @@ export function SummaryCard(props: Props) {
         </span>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {props.notes.length > 0 && (
-            <span style={{ display: 'flex', gap: '2px' }}>
-              <button
-                class="btn btn-ghost"
-                style={{ padding: '4px 9px' }}
-                onClick={() => props.onNav(-1)}
-                title="Previous finding"
-              >
-                ‹
-              </button>
-              <button
-                class="btn btn-ghost"
-                style={{ padding: '4px 9px' }}
-                onClick={() => props.onNav(1)}
-                title="Next finding"
-              >
-                ›
-              </button>
-            </span>
-          )}
           <button
             class="btn btn-ghost"
             style={{ padding: '4px 10px' }}
@@ -161,7 +139,7 @@ export function SummaryCard(props: Props) {
                 {props.notes.length > 0 && (
                   <span style={{ color: C.muted, font: '12px/1.5 inherit' }}>
                     <span style={{ color: C.accentDark }}>✦</span>{' '}
-                    Click a badge in the diff for the note on that line.
+                    Use the floating navigator or click a badge to open an annotation.
                   </span>
                 )}
                 {props.cached && (

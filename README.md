@@ -53,12 +53,23 @@ lines that appear in the diff itself.
   cached per head SHA, so revisiting a PR is free.
 - **`✦` badges** trail the end of each annotated line, colour-coded by kind.
   Unread badges pulse gently; a badge stops for good once you've opened it.
-- **Click a badge** for the note: what's wrong, where (`file:line`), how far to
-  trust it ("depends on code not in this diff"), and — when the model has one —
-  a block labelled **SUGGESTED FIX** with a Copy button.
-- **Chat** (the floating `✦` button, or "Ask about this" in a note) opens a
-  panel grounded in the diff, the review, and the full changed files. Enter
-  sends, Shift+Enter breaks the line.
+- **The floating navigator** stays at the bottom while you scroll. Previous
+  and next walk through loaded annotations in diff order; click the count to
+  jump by title and file. Notes on unloaded lines remain in the list and become
+  available when you expand or load their files. The list supports arrow keys
+  and Escape, and follows the toolbar's annotation filters.
+- **Inline discussions** sit directly beneath the cited line, or the end of
+  the affected section, with the remaining code continuing below. Risk and
+  security findings start expanded; click a badge or **Expand** to open the
+  others. Each shows the source and any confidence caveat. **Show suggested
+  fix** reveals the model's code with a Copy button.
+- **Ask a follow-up** inside a finding to discuss it in place. Drafts and
+  conversations survive diff redraws and annotation filters during this visit.
+- **Chat** (the floating `✦` button, or **Continue in chat** in a finding) opens
+  the right sidebar, grounded in the diff, review, and full changed files.
+  Continuing a finding carries its discussion into chat without another model
+  request. Desktop layouts make room beside the code; narrow windows use a
+  dismissible panel. Enter sends, Shift+Enter breaks the line.
 - **The toolbar popup** filters which note kinds show (problems only → ⋯ →
   everything) and picks the model.
 
