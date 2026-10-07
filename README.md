@@ -53,6 +53,11 @@ lines that appear in the diff itself.
   cached per head SHA, so revisiting a PR is free.
 - **`✦` badges** trail the end of each annotated line, colour-coded by kind.
   Unread badges pulse gently; a badge stops for good once you've opened it.
+- **The floating navigator** stays at the bottom while you scroll. Previous
+  and next walk through loaded annotations in diff order; click the count to
+  jump by title and file. Notes on unloaded lines remain in the list and become
+  available when you expand or load their files. The list supports arrow keys
+  and Escape, and follows the toolbar's annotation filters.
 - **Inline discussions** sit directly beneath the cited line, or the end of
   the affected section, with the remaining code continuing below. Risk and
   security findings start expanded; click a badge or **Expand** to open the

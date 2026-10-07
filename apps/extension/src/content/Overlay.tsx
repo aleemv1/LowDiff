@@ -1,10 +1,11 @@
 import { Fragment } from 'preact';
 import { createPortal } from 'preact/compat';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Note, NoteKind } from '@lowdiff/core';
 import type { AnnotateReply, ChatTurn, PrLocation, PublicSettingsReply } from '../shared/messages.js';
 import { C } from './theme.js';
 import { SummaryCard } from './components/SummaryCard.js';
+import { AnnotationDock } from './components/AnnotationDock.js';
 import { Sparkle } from './components/Sparkle.js';
 import { InlineNote } from './components/InlineNote.js';
 import { InlineNotes } from './inline-notes.js';
@@ -101,9 +102,11 @@ export function Overlay({ pr, overlayRoot }: Props) {
   const [busy, setBusy] = useState(true);
   const [idle, setIdle] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placed, setPlaced] = useState(0);
+  const [placedKeys, setPlacedKeys] = useState<string[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const [chatOpen, setChatOpen] = useState(false);
+  const wasChatOpen = useRef(false);
   const [input, setInput] = useState('');
   const [chatSource, setChatSource] = useState<string | null>(null);
   const chat = useConversation(pr);
@@ -118,10 +121,16 @@ export function Overlay({ pr, overlayRoot }: Props) {
     () => notes.filter((note) => !hiddenKinds.includes(note.kind)),
     [notes, hiddenKinds],
   );
+  const orderedNotes = useMemo(() => {
+    const order = new Map(placedKeys.map((key, index) => [key, index]));
+    return [...visibleNotes].sort((a, b) =>
+      (order.get(noteKey(a)) ?? placedKeys.length) - (order.get(noteKey(b)) ?? placedKeys.length));
+  }, [visibleNotes, placedKeys]);
 
   const select = useCallback((note: Note, element: HTMLElement) => {
     const key = noteKey(note);
     navKey.current = key;
+    setActiveKey(key);
     setActiveBadge(element);
     const dom = detectDiffDom();
     if (dom) highlightNote(note, dom);
@@ -138,14 +147,33 @@ export function Overlay({ pr, overlayRoot }: Props) {
   // Reserve space on desktop so chat never sits on top of the diff. On a
   // narrow viewport it becomes a dismissible sheet instead of squeezing code.
   useEffect(() => {
-    if (!chatOpen) return;
     const style = document.createElement('style');
     style.textContent = `@media (min-width: 1000px) {
-      body { box-sizing: border-box !important; padding-right: 400px !important; }
+      body[data-lowdiff-chat-layout] {
+        box-sizing: border-box !important;
+        transition: padding-right 280ms cubic-bezier(.22,.61,.36,1) !important;
+      }
+      body[data-lowdiff-chat-open] { padding-right: 400px !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body[data-lowdiff-chat-layout] { transition: none !important; }
     }`;
     document.head.append(style);
-    return () => style.remove();
-  }, [chatOpen]);
+    document.body.setAttribute('data-lowdiff-chat-layout', '');
+    return () => {
+      style.remove();
+      document.body.removeAttribute('data-lowdiff-chat-layout');
+      document.body.removeAttribute('data-lowdiff-chat-open');
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    document.body.toggleAttribute('data-lowdiff-chat-open', chatOpen);
+    if (!chatOpen && wasChatOpen.current) {
+      overlayRoot.querySelector<HTMLButtonElement>('button[aria-label="Open LowDiff chat"]')?.focus({ preventScroll: true });
+    }
+    wasChatOpen.current = chatOpen;
+  }, [chatOpen, overlayRoot]);
 
   /**
    * Walk the findings in document order, glowing each visited star. The
@@ -165,12 +193,21 @@ export function Overlay({ pr, overlayRoot }: Props) {
             : badges.length - 1
           : (at + step + badges.length) % badges.length;
       const badge = badges[next]!;
-      navKey.current = badge.getAttribute('data-lowdiff-key');
       badge.scrollIntoView({ block: 'center' });
       badge.click();
     },
     [],
   );
+
+  const jumpTo = useCallback((note: Note) => {
+    const key = noteKey(note);
+    const badge = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')]
+      .find(element => element.getAttribute('data-lowdiff-key') === key);
+    if (!badge) return;
+    badge.scrollIntoView({ block: 'center' });
+    badge.focus({ preventScroll: true });
+    badge.click();
+  }, []);
 
   /** Reconcile against DOM identity: GitHub may replace rows without changing their count. */
   useEffect(() => {
@@ -178,24 +215,34 @@ export function Overlay({ pr, overlayRoot }: Props) {
       clearBadges();
       inlineNotes.clear();
       setSlots([]);
-      setPlaced(0);
+      setPlacedKeys([]);
+      navKey.current = null;
+      setActiveKey(null);
+      const dom = detectDiffDom();
+      if (dom) highlightNote(null, dom);
       return;
     }
     let previousCells: HTMLElement[] = [];
     let expectedBadges = -1;
     return watch(() => {
       const dom = detectDiffDom();
-      if (!dom) return;
+      if (!dom) {
+        previousCells = [];
+        expectedBadges = -1;
+        setPlacedKeys(previous => previous.length ? [] : previous);
+        return;
+      }
       const cells = dom.paths().flatMap(path => dom.lines(path).map(line => line.codeCell));
       const changed = cells.length !== previousCells.length || cells.some((cell, index) => cell !== previousCells[index]) ||
         document.querySelectorAll('[data-lowdiff-badge]').length !== expectedBadges;
       if (changed) {
         previousCells = cells;
         expectedBadges = syncBadges(visibleNotes, dom, ({ note, element }) => select(note, element));
-        setPlaced(expectedBadges);
-        const active = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')]
-          .find(badge => badge.getAttribute('data-lowdiff-key') === navKey.current);
+        const badges = [...document.querySelectorAll<HTMLElement>('[data-lowdiff-badge]')];
+        setPlacedKeys(badges.map(badge => badge.getAttribute('data-lowdiff-key')!));
+        const active = badges.find(badge => badge.getAttribute('data-lowdiff-key') === navKey.current);
         setActiveBadge(active ?? null);
+        highlightNote(active ? visibleNotes.find(note => noteKey(note) === navKey.current) ?? null : null, dom);
       }
       const next = inlineNotes.sync(notes, dom, hiddenKinds);
       if (changed) setSlots(next);
@@ -304,7 +351,7 @@ export function Overlay({ pr, overlayRoot }: Props) {
     setChatOpen(true);
   };
 
-  const notesLost = visibleNotes.length - placed;
+  const notesLost = visibleNotes.length - placedKeys.length;
   const notesHidden = notes.length - visibleNotes.length;
 
   return (
@@ -317,7 +364,6 @@ export function Overlay({ pr, overlayRoot }: Props) {
         onRefresh={() => void run(true)}
         idle={idle}
         onScan={() => void run(false)}
-        onNav={nav}
       />
 
       {notesHidden > 0 && !busy && (
@@ -366,8 +412,10 @@ export function Overlay({ pr, overlayRoot }: Props) {
           onKeyUp={(e) => e.stopPropagation()}
           onKeyPress={(e) => e.stopPropagation()}
         >
-      {chatOpen ? (
-        <ChatPanel
+      <AnnotationDock notes={orderedNotes} placedKeys={placedKeys} activeKey={activeKey}
+        busy={busy} chatOpen={chatOpen} onToggleChat={() => setChatOpen(open => !open)} onNav={nav} onSelect={jumpTo} />
+      <ChatPanel
+          open={chatOpen}
           messages={chat.messages}
           typing={chat.busy}
           activity={chat.activity}
@@ -379,9 +427,10 @@ export function Overlay({ pr, overlayRoot }: Props) {
           onInput={setInput}
           onSend={send}
           onClose={() => setChatOpen(false)}
-        />
-      ) : (
+      />
+      {!chatOpen && visibleNotes.length === 0 && !busy && (
         <button
+          class="chat-launcher"
           type="button"
           onClick={() => setChatOpen(true)}
           title="Ask LowDiff"

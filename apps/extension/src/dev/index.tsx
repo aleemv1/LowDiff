@@ -71,6 +71,14 @@ const notes: Note[] = anchorNotes(
   files,
 );
 
+// Optional fixture for checking overflow and focus deep in the jump list.
+const previewNotes = new URLSearchParams(window.location.search).has('long-review')
+  ? Array.from({ length: 20 }, (_, index): Note => ({
+      ...notes[index % notes.length]!, kind: 'EXPLAIN',
+      title: `Review detail ${index + 1}: ${notes[index % notes.length]!.title}`,
+    }))
+  : notes;
+
 // Minimal chrome stub — enough for the overlay's message round-trips.
 const memory = new Map<string, unknown>();
 
@@ -105,7 +113,7 @@ const memory = new Map<string, unknown>();
           ok: true,
           summary:
             'Replaces per-keystroke fetching with a 300ms debounce and fixes the stale dependency array from #398. One unresolved risk: in-flight requests are not cancelled.',
-          notes,
+          notes: previewNotes,
           headSha: 'fixture',
           cached: false,
           usage: { inputTokens: 8000, outputTokens: 1200 },

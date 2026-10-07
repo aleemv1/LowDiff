@@ -5,6 +5,7 @@ import { Sparkle } from './Sparkle.js';
 import type { ChatTurn } from '../../shared/messages.js';
 
 interface Props {
+  open: boolean;
   messages: ChatTurn[];
   typing: boolean;
   /** Live tool activity, e.g. 'searching "useDebounce"'. */
@@ -28,8 +29,8 @@ export function ChatPanel(props: Props) {
   // this input. Unfocused, they fall through to the page — where they read as
   // GitHub hotkeys — and "typing does nothing" is the symptom.
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (props.open) inputRef.current?.focus({ preventScroll: true });
+  }, [props.open]);
 
   // Collapse back to one row once the question is sent.
   useEffect(() => {
@@ -43,6 +44,9 @@ export function ChatPanel(props: Props) {
 
   return (
     <div
+      class={`chat-panel${props.open ? ' is-open' : ''}`}
+      aria-hidden={!props.open}
+      inert={!props.open}
       onClick={(e) => {
         // Coming back to the panel means coming back to the conversation:
         // route stray clicks to the input, but never over a control click or
@@ -63,7 +67,7 @@ export function ChatPanel(props: Props) {
       style={{
         position: 'fixed', right: 0, top: 0, bottom: 0, zIndex: 2147483000, width: 'min(400px, 100vw)',
         display: 'flex', flexDirection: 'column', background: C.surface,
-        boxShadow: '-8px 0 32px rgba(20,30,60,.14)', animation: 'chatUp .18s ease-out',
+        boxShadow: '-8px 0 32px rgba(20,30,60,.14)',
         borderLeft: `1px solid ${C.line}`,
         fontFamily: `'DM Sans', -apple-system, sans-serif`,
       }}
@@ -119,7 +123,7 @@ export function ChatPanel(props: Props) {
       </div>
 
       <div style={{ padding: '10px 14px 14px' }}>
-        <div style={{ border: `1px solid ${C.accentBorder}`, borderRadius: '10px', boxShadow: '0 1px 3px rgba(20,30,60,.05)' }}>
+        <div class="chat-composer" style={{ borderRadius: '10px', boxShadow: '0 1px 3px rgba(20,30,60,.05)' }}>
           <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 0', flexWrap: 'wrap', alignItems: 'center' }}>
             {props.contextChips.map((chip) => (
               <span
